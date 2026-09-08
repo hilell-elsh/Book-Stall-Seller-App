@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavTabs, type TabId } from './components/NavTabs'
-import { ConfigPage } from './pages/ConfigPage'
+import { ConfigPage } from './pages/ConfigPage/ConfigPage'
 import { RecordsPage } from './pages/RecordsPage'
 import { SalePage } from './pages/SalePage'
 

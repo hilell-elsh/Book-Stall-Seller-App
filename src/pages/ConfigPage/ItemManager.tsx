@@ -45,7 +45,7 @@ export function ItemManager() {
   }
 
   return (
-    <section className="mt-6">
+    <section>
       <h2 className="text-base font-semibold">פריטים</h2>
 
       {categories.map((category) => {
@@ -96,7 +96,7 @@ export function ItemManager() {
                       type="button"
                       onClick={() => moveItem(item.id, 'up')}
                       disabled={index === 0}
-                      className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                      className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
                       aria-label="הזז למעלה"
                     >
                       ↑
@@ -105,7 +105,7 @@ export function ItemManager() {
                       type="button"
                       onClick={() => moveItem(item.id, 'down')}
                       disabled={index === categoryItems.length - 1}
-                      className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                      className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
                       aria-label="הזז למטה"
                     >
                       ↓
@@ -113,7 +113,7 @@ export function ItemManager() {
                     <button
                       type="button"
                       onClick={() => setPendingDelete(item)}
-                      className="h-9 w-9 shrink-0 rounded border border-red-300 text-sm text-red-600"
+                      className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
                       aria-label="מחק"
                     >
                       ✕

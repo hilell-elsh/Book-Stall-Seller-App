@@ -9,6 +9,7 @@ const ITEMS_KEY = 'items'
 const DISCOUNT_RULES_KEY = 'discountRules'
 const LABELS_KEY = 'labels'
 const SALE_RECORDS_KEY = 'saleRecords'
+const SELLER_NAME_KEY = 'sellerName'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -52,4 +53,12 @@ export function getSaleRecords(): SaleRecord[] {
 
 export function saveSaleRecords(records: SaleRecord[]): void {
   writeJSON(SALE_RECORDS_KEY, records)
+}
+
+export function getSellerName(): string {
+  return readJSON<string>(SELLER_NAME_KEY, '')
+}
+
+export function saveSellerName(name: string): void {
+  writeJSON(SELLER_NAME_KEY, name)
 }

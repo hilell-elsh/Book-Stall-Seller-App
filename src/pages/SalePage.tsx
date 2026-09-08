@@ -9,11 +9,11 @@ interface SalePageProps {
 }
 
 export function SalePage({ cart }: SalePageProps) {
-  const { categories, items, labels, addSaleRecord } = useAppData()
+  const { categories, items, labels, sellerName, addSaleRecord } = useAppData()
 
   function handleSave() {
     if (cart.lines.length === 0) return
-    addSaleRecord(cart.evaluated)
+    addSaleRecord({ ...cart.evaluated, recordedBy: sellerName || undefined })
     cart.clear()
   }
 

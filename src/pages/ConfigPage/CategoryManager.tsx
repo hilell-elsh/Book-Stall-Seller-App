@@ -38,7 +38,7 @@ export function CategoryManager() {
               type="button"
               onClick={() => moveCategory(category.id, 'up')}
               disabled={index === 0}
-              className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+              className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
               aria-label="הזז למעלה"
             >
               ↑
@@ -47,7 +47,7 @@ export function CategoryManager() {
               type="button"
               onClick={() => moveCategory(category.id, 'down')}
               disabled={index === categories.length - 1}
-              className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+              className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
               aria-label="הזז למטה"
             >
               ↓
@@ -55,7 +55,7 @@ export function CategoryManager() {
             <button
               type="button"
               onClick={() => setPendingDelete(category)}
-              className="h-9 w-9 shrink-0 rounded border border-red-300 text-sm text-red-600"
+              className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
               aria-label="מחק"
             >
               ✕

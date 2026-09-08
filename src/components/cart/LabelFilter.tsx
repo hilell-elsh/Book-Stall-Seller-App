@@ -18,7 +18,7 @@ export function LabelFilter({ labels, activeLabelIds, onToggle }: LabelFilterPro
             key={label.id}
             type="button"
             onClick={() => onToggle(label.id)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+            className={`flex min-h-9 items-center justify-center rounded-full border px-3 text-xs font-medium ${
               active
                 ? 'border-blue-600 bg-blue-600 text-white'
                 : 'border-gray-300 text-gray-600'

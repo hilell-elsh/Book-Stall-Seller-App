@@ -2,20 +2,39 @@ import { useState } from 'react'
 import { CartLinesList } from '../components/cart/CartLinesList'
 import { CategoryPicker } from '../components/cart/CategoryPicker'
 import { ItemGrid } from '../components/cart/ItemGrid'
+import { LabelFilter } from '../components/cart/LabelFilter'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
 import type { CartState } from '../hooks/useCartState'
+import type { CatalogItem } from '../types/catalog'
 
 interface SalePageProps {
   cart: CartState
 }
 
 export function SalePage({ cart }: SalePageProps) {
-  const { categories, items, addSaleRecord } = useAppData()
+  const { categories, items, labels, addSaleRecord } = useAppData()
   const [activeCategoryId, setActiveCategoryId] = useState('')
+  const [activeLabelIds, setActiveLabelIds] = useState<string[]>([])
 
   const isShowingAll = activeCategoryId === ''
-  const categoryItems = items.filter((item) => item.categoryId === activeCategoryId)
+
+  function matchesLabelFilter(item: CatalogItem): boolean {
+    return (
+      activeLabelIds.length === 0 ||
+      activeLabelIds.some((labelId) => item.labelIds.includes(labelId))
+    )
+  }
+
+  function toggleLabelFilter(labelId: string) {
+    setActiveLabelIds((prev) =>
+      prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId],
+    )
+  }
+
+  const categoryItems = items
+    .filter((item) => item.categoryId === activeCategoryId)
+    .filter(matchesLabelFilter)
 
   function handleSave() {
     if (cart.lines.length === 0) return
@@ -42,10 +61,13 @@ export function SalePage({ cart }: SalePageProps) {
           activeCategoryId={activeCategoryId}
           onSelect={setActiveCategoryId}
         />
+        <LabelFilter labels={labels} activeLabelIds={activeLabelIds} onToggle={toggleLabelFilter} />
         {isShowingAll ? (
           <div className="space-y-3">
             {categories.map((category) => {
-              const itemsInCategory = items.filter((item) => item.categoryId === category.id)
+              const itemsInCategory = items
+                .filter((item) => item.categoryId === category.id)
+                .filter(matchesLabelFilter)
               if (itemsInCategory.length === 0) return null
               return (
                 <div key={category.id}>

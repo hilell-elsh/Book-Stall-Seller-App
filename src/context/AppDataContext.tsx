@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
+import type { EvaluatedSale } from '../domain/pricing'
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
 import type { Label } from '../types/label'
@@ -40,6 +41,8 @@ interface AppDataContextValue {
   toggleItemLabel: (itemId: string, labelId: string) => void
   saleRecords: SaleRecord[]
   addSaleRecord: (record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
+  updateSaleRecord: (id: string, evaluated: EvaluatedSale) => void
+  deleteSaleRecord: (id: string) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -283,6 +286,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistSaleRecords([...saleRecords, saleRecord])
   }
 
+  function updateSaleRecord(id: string, evaluated: EvaluatedSale) {
+    persistSaleRecords(
+      saleRecords.map((record) =>
+        record.id === id ? { ...record, ...evaluated, updatedAt: now() } : record,
+      ),
+    )
+  }
+
+  function deleteSaleRecord(id: string) {
+    persistSaleRecords(saleRecords.filter((record) => record.id !== id))
+  }
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -309,6 +324,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       toggleItemLabel,
       saleRecords,
       addSaleRecord,
+      updateSaleRecord,
+      deleteSaleRecord,
     }),
     [categories, items, discountRules, labels, saleRecords],
   )

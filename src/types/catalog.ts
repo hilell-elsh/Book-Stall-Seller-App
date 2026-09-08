@@ -13,6 +13,7 @@ export interface CatalogItem {
   price: number
   order: number
   active: boolean
+  labelIds: string[]
   createdAt: string
   updatedAt: string
 }

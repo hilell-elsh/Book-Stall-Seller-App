@@ -17,7 +17,11 @@ export function saveCategories(categories: Category[]): void {
 }
 
 export function getItems(): CatalogItem[] {
-  return readJSON<CatalogItem[]>(ITEMS_KEY, [])
+  // labelIds was added after some items may have already been saved; default it.
+  return readJSON<CatalogItem[]>(ITEMS_KEY, []).map((item) => ({
+    ...item,
+    labelIds: item.labelIds ?? [],
+  }))
 }
 
 export function saveItems(items: CatalogItem[]): void {

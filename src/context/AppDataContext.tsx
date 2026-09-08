@@ -25,6 +25,7 @@ interface AppDataContextValue {
   ) => void
   deleteItem: (id: string) => void
   moveItem: (id: string, direction: 'up' | 'down') => void
+  changeItemCategory: (id: string, categoryId: string) => void
   discountRules: DiscountRule[]
   addDiscountRule: (draft: DiscountRuleDraft) => void
   updateDiscountRule: (id: string, draft: DiscountRuleDraft) => void
@@ -161,6 +162,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistItems(items.filter((item) => item.id !== id))
   }
 
+  function changeItemCategory(id: string, categoryId: string) {
+    const item = items.find((entry) => entry.id === id)
+    if (!item || item.categoryId === categoryId) return
+    const siblings = items.filter((entry) => entry.categoryId === categoryId)
+    const nextOrder = siblings.length
+      ? Math.max(...siblings.map((entry) => entry.order)) + 1
+      : 0
+    persistItems(
+      items.map((entry) =>
+        entry.id === id
+          ? { ...entry, categoryId, order: nextOrder, updatedAt: now() }
+          : entry,
+      ),
+    )
+  }
+
   function moveItem(id: string, direction: 'up' | 'down') {
     const item = items.find((entry) => entry.id === id)
     if (!item) return
@@ -259,6 +276,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateItem,
       deleteItem,
       moveItem,
+      changeItemCategory,
       discountRules: sortByOrder(discountRules),
       addDiscountRule,
       updateDiscountRule,

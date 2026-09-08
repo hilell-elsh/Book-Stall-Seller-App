@@ -4,8 +4,17 @@ import { useAppData } from '../../context/AppDataContext'
 import type { CatalogItem } from '../../types/catalog'
 
 export function ItemManager() {
-  const { categories, items, labels, addItem, updateItem, deleteItem, moveItem, toggleItemLabel } =
-    useAppData()
+  const {
+    categories,
+    items,
+    labels,
+    addItem,
+    updateItem,
+    deleteItem,
+    moveItem,
+    changeItemCategory,
+    toggleItemLabel,
+  } = useAppData()
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [newName, setNewName] = useState('')
   const [newPrice, setNewPrice] = useState('')
@@ -72,6 +81,17 @@ export function ItemManager() {
                       }}
                       className="w-20 shrink-0 rounded border border-gray-300 px-2 py-2 text-sm"
                     />
+                    <select
+                      value={item.categoryId}
+                      onChange={(e) => changeItemCategory(item.id, e.target.value)}
+                      className="shrink-0 rounded border border-gray-300 px-2 py-2 text-sm"
+                    >
+                      {categories.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       onClick={() => moveItem(item.id, 'up')}

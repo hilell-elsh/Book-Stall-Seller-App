@@ -35,43 +35,48 @@ export function SalePage({ cart }: SalePageProps) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-49px)] flex-col">
-      <CategoryPicker
-        categories={categories}
-        activeCategoryId={activeCategoryId}
-        onSelect={setActiveCategoryId}
-      />
-      {isShowingAll ? (
-        <div className="space-y-3">
-          {categories.map((category) => {
-            const itemsInCategory = items.filter((item) => item.categoryId === category.id)
-            if (itemsInCategory.length === 0) return null
-            return (
-              <div key={category.id}>
-                <h2 className="px-3 text-sm font-medium text-gray-600">{category.name}</h2>
-                <div className="mt-1">
-                  <ItemGrid items={itemsInCategory} onAdd={cart.addItem} />
+    <div className="flex min-h-[calc(100vh-49px)] flex-col sm:flex-row">
+      <div className="flex-1">
+        <CategoryPicker
+          categories={categories}
+          activeCategoryId={activeCategoryId}
+          onSelect={setActiveCategoryId}
+        />
+        {isShowingAll ? (
+          <div className="space-y-3">
+            {categories.map((category) => {
+              const itemsInCategory = items.filter((item) => item.categoryId === category.id)
+              if (itemsInCategory.length === 0) return null
+              return (
+                <div key={category.id}>
+                  <h2 className="px-3 text-sm font-medium text-gray-600">{category.name}</h2>
+                  <div className="mt-1">
+                    <ItemGrid items={itemsInCategory} onAdd={cart.addItem} />
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+        ) : (
+          <ItemGrid items={categoryItems} onAdd={cart.addItem} />
+        )}
+      </div>
+
+      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-gray-200">
+        <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
+          <CartLinesList
+            lines={cart.evaluated.lines}
+            onSetQty={cart.setQty}
+            onRemove={cart.removeItem}
+          />
         </div>
-      ) : (
-        <ItemGrid items={categoryItems} onAdd={cart.addItem} />
-      )}
-      <div className="mt-3 flex-1">
-        <CartLinesList
-          lines={cart.evaluated.lines}
-          onSetQty={cart.setQty}
-          onRemove={cart.removeItem}
+        <SaleSummary
+          evaluated={cart.evaluated}
+          actionLabel="שמור מכירה"
+          onAction={handleSave}
+          disabled={cart.lines.length === 0}
         />
       </div>
-      <SaleSummary
-        evaluated={cart.evaluated}
-        actionLabel="שמור מכירה"
-        onAction={handleSave}
-        disabled={cart.lines.length === 0}
-      />
     </div>
   )
 }

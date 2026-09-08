@@ -170,6 +170,11 @@ export function DiscountRuleForm({
           <option value="stepDiscount">הנחה מדורגת</option>
           <option value="bundlePrice">מחיר חבילה</option>
         </select>
+        <p className="mt-1 text-xs text-gray-500">
+          {kind === 'stepDiscount'
+            ? 'הנחה על כל פריט החל ממספר מסוים באותה קבוצה. לדוגמה: "מפריט מס\' 2 ואילך בקטגוריית אוסף — 5₪ הנחה" (הפריט הראשון במחיר מלא, מהשני והלאה בהנחה).'
+            : 'מחיר קבוע לכמות פריטים יחד. לדוגמה: "3 פריטים מקטגוריית אוסף ב-25₪" — כל שלשה שלמה מהקבוצה תחויב ב-25₪ בסך הכול במקום המחיר המקורי.'}
+        </p>
       </div>
 
       <div className="space-y-3 rounded border border-gray-100 bg-gray-50 p-2">

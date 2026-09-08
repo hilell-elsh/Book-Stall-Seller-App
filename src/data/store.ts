@@ -1,12 +1,14 @@
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule } from '../types/discount'
 import type { Label } from '../types/label'
+import type { SaleRecord } from '../types/sale'
 import { readJSON, writeJSON } from './localStorageDriver'
 
 const CATEGORIES_KEY = 'categories'
 const ITEMS_KEY = 'items'
 const DISCOUNT_RULES_KEY = 'discountRules'
 const LABELS_KEY = 'labels'
+const SALE_RECORDS_KEY = 'saleRecords'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -42,4 +44,12 @@ export function getLabels(): Label[] {
 
 export function saveLabels(labels: Label[]): void {
   writeJSON(LABELS_KEY, labels)
+}
+
+export function getSaleRecords(): SaleRecord[] {
+  return readJSON<SaleRecord[]>(SALE_RECORDS_KEY, [])
+}
+
+export function saveSaleRecords(records: SaleRecord[]): void {
+  writeJSON(SALE_RECORDS_KEY, records)
 }

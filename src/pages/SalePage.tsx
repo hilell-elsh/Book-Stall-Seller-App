@@ -1,8 +1,60 @@
-export function SalePage() {
+import { useState } from 'react'
+import { CartLinesList } from '../components/cart/CartLinesList'
+import { CategoryPicker } from '../components/cart/CategoryPicker'
+import { ItemGrid } from '../components/cart/ItemGrid'
+import { SaleSummary } from '../components/cart/SaleSummary'
+import { useAppData } from '../context/AppDataContext'
+import type { CartState } from '../hooks/useCartState'
+
+interface SalePageProps {
+  cart: CartState
+}
+
+export function SalePage({ cart }: SalePageProps) {
+  const { categories, items, addSaleRecord } = useAppData()
+  const [activeCategoryId, setActiveCategoryId] = useState('')
+
+  const currentCategoryId = activeCategoryId || categories[0]?.id || ''
+  const categoryItems = items.filter((item) => item.categoryId === currentCategoryId)
+
+  function handleSave() {
+    if (cart.lines.length === 0) return
+    addSaleRecord(cart.evaluated)
+    cart.clear()
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div className="p-4">
+        <h1 className="text-lg font-semibold">מכירה</h1>
+        <p className="mt-2 text-sm text-gray-400">
+          יש להוסיף קודם קטגוריות ופריטים במסך ההגדרות.
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-4">
-      <h1 className="text-lg font-semibold">מכירה</h1>
-      <p className="mt-2 text-gray-500">כאן יופיע מסך חישוב המכירה.</p>
+    <div className="flex min-h-[calc(100vh-49px)] flex-col">
+      <CategoryPicker
+        categories={categories}
+        activeCategoryId={currentCategoryId}
+        onSelect={setActiveCategoryId}
+      />
+      <ItemGrid items={categoryItems} onAdd={cart.addItem} />
+      <div className="mt-3 flex-1">
+        <CartLinesList
+          lines={cart.evaluated.lines}
+          onSetQty={cart.setQty}
+          onRemove={cart.removeItem}
+        />
+      </div>
+      <SaleSummary
+        evaluated={cart.evaluated}
+        actionLabel="שמור מכירה"
+        onAction={handleSave}
+        disabled={cart.lines.length === 0}
+      />
     </div>
   )
 }

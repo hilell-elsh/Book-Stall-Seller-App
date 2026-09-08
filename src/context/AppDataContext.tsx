@@ -7,10 +7,11 @@ import {
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
-import type { EvaluatedSale } from '../domain/pricing'
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
 import type { Label } from '../types/label'
+import type { PaymentMethod } from '../types/paymentMethod'
+import type { Receiver } from '../types/receiver'
 import type { SaleRecord } from '../types/sale'
 
 interface AppDataContextValue {
@@ -41,8 +42,19 @@ interface AppDataContextValue {
   toggleItemLabel: (itemId: string, labelId: string) => void
   saleRecords: SaleRecord[]
   addSaleRecord: (record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateSaleRecord: (id: string, evaluated: EvaluatedSale) => void
+  updateSaleRecord: (
+    id: string,
+    record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>,
+  ) => void
   deleteSaleRecord: (id: string) => void
+  paymentMethods: PaymentMethod[]
+  addPaymentMethod: (name: string) => void
+  renamePaymentMethod: (id: string, name: string) => void
+  deletePaymentMethod: (id: string) => void
+  receivers: Receiver[]
+  addReceiver: (name: string) => void
+  renameReceiver: (id: string, name: string) => void
+  deleteReceiver: (id: string) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -85,6 +97,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   )
   const [labels, setLabels] = useState<Label[]>(() => store.getLabels())
   const [saleRecords, setSaleRecords] = useState<SaleRecord[]>(() => store.getSaleRecords())
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(() =>
+    store.getPaymentMethods(),
+  )
+  const [receivers, setReceivers] = useState<Receiver[]>(() => store.getReceivers())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -109,6 +125,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function persistSaleRecords(next: SaleRecord[]) {
     setSaleRecords(next)
     store.saveSaleRecords(next)
+  }
+
+  function persistPaymentMethods(next: PaymentMethod[]) {
+    setPaymentMethods(next)
+    store.savePaymentMethods(next)
+  }
+
+  function persistReceivers(next: Receiver[]) {
+    setReceivers(next)
+    store.saveReceivers(next)
   }
 
   function addCategory(name: string) {
@@ -286,16 +312,53 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistSaleRecords([...saleRecords, saleRecord])
   }
 
-  function updateSaleRecord(id: string, evaluated: EvaluatedSale) {
+  function updateSaleRecord(
+    id: string,
+    record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>,
+  ) {
     persistSaleRecords(
-      saleRecords.map((record) =>
-        record.id === id ? { ...record, ...evaluated, updatedAt: now() } : record,
+      saleRecords.map((entry) =>
+        entry.id === id ? { ...entry, ...record, updatedAt: now() } : entry,
       ),
     )
   }
 
   function deleteSaleRecord(id: string) {
     persistSaleRecords(saleRecords.filter((record) => record.id !== id))
+  }
+
+  function addPaymentMethod(name: string) {
+    const method: PaymentMethod = { id: newId(), name, createdAt: now(), updatedAt: now() }
+    persistPaymentMethods([...paymentMethods, method])
+  }
+
+  function renamePaymentMethod(id: string, name: string) {
+    persistPaymentMethods(
+      paymentMethods.map((method) =>
+        method.id === id ? { ...method, name, updatedAt: now() } : method,
+      ),
+    )
+  }
+
+  function deletePaymentMethod(id: string) {
+    persistPaymentMethods(paymentMethods.filter((method) => method.id !== id))
+  }
+
+  function addReceiver(name: string) {
+    const receiver: Receiver = { id: newId(), name, createdAt: now(), updatedAt: now() }
+    persistReceivers([...receivers, receiver])
+  }
+
+  function renameReceiver(id: string, name: string) {
+    persistReceivers(
+      receivers.map((receiver) =>
+        receiver.id === id ? { ...receiver, name, updatedAt: now() } : receiver,
+      ),
+    )
+  }
+
+  function deleteReceiver(id: string) {
+    persistReceivers(receivers.filter((receiver) => receiver.id !== id))
   }
 
   const value = useMemo<AppDataContextValue>(
@@ -326,8 +389,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       addSaleRecord,
       updateSaleRecord,
       deleteSaleRecord,
+      paymentMethods,
+      addPaymentMethod,
+      renamePaymentMethod,
+      deletePaymentMethod,
+      receivers,
+      addReceiver,
+      renameReceiver,
+      deleteReceiver,
     }),
-    [categories, items, discountRules, labels, saleRecords],
+    [categories, items, discountRules, labels, saleRecords, paymentMethods, receivers],
   )
 
   return (

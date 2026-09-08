@@ -1,6 +1,8 @@
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule } from '../types/discount'
 import type { Label } from '../types/label'
+import type { PaymentMethod } from '../types/paymentMethod'
+import type { Receiver } from '../types/receiver'
 import type { SaleRecord } from '../types/sale'
 import { readJSON, writeJSON } from './localStorageDriver'
 
@@ -9,6 +11,8 @@ const ITEMS_KEY = 'items'
 const DISCOUNT_RULES_KEY = 'discountRules'
 const LABELS_KEY = 'labels'
 const SALE_RECORDS_KEY = 'saleRecords'
+const PAYMENT_METHODS_KEY = 'paymentMethods'
+const RECEIVERS_KEY = 'receivers'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -52,4 +56,20 @@ export function getSaleRecords(): SaleRecord[] {
 
 export function saveSaleRecords(records: SaleRecord[]): void {
   writeJSON(SALE_RECORDS_KEY, records)
+}
+
+export function getPaymentMethods(): PaymentMethod[] {
+  return readJSON<PaymentMethod[]>(PAYMENT_METHODS_KEY, [])
+}
+
+export function savePaymentMethods(methods: PaymentMethod[]): void {
+  writeJSON(PAYMENT_METHODS_KEY, methods)
+}
+
+export function getReceivers(): Receiver[] {
+  return readJSON<Receiver[]>(RECEIVERS_KEY, [])
+}
+
+export function saveReceivers(receivers: Receiver[]): void {
+  writeJSON(RECEIVERS_KEY, receivers)
 }

@@ -1,4 +1,5 @@
 import { Money } from '../../components/Money'
+import { useAppData } from '../../context/AppDataContext'
 import type { SaleRecord } from '../../types/sale'
 
 interface RecordListProps {
@@ -9,6 +10,9 @@ interface RecordListProps {
 const dateFormatter = new Intl.DateTimeFormat('he-IL', { dateStyle: 'short', timeStyle: 'short' })
 
 export function RecordList({ records, onSelect }: RecordListProps) {
+  const { paymentMethods, receivers } = useAppData()
+  const paymentMethodById = new Map(paymentMethods.map((method) => [method.id, method]))
+  const receiverById = new Map(receivers.map((receiver) => [receiver.id, receiver]))
   const sorted = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   if (sorted.length === 0) {
@@ -19,6 +23,17 @@ export function RecordList({ records, onSelect }: RecordListProps) {
     <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
       {sorted.map((record) => {
         const itemCount = record.lines.reduce((sum, line) => sum + line.qty, 0)
+        const paymentMethodName = record.paymentMethodId
+          ? paymentMethodById.get(record.paymentMethodId)?.name
+          : undefined
+        const receiverName = record.receiverId
+          ? receiverById.get(record.receiverId)?.name
+          : undefined
+        const details = [
+          `${itemCount} פריטים`,
+          paymentMethodName,
+          receiverName,
+        ].filter(Boolean)
         return (
           <li key={record.id}>
             <button
@@ -30,7 +45,7 @@ export function RecordList({ records, onSelect }: RecordListProps) {
                 <p className="text-sm font-medium">
                   {dateFormatter.format(new Date(record.createdAt))}
                 </p>
-                <p className="text-xs text-gray-500">{itemCount} פריטים</p>
+                <p className="text-xs text-gray-500">{details.join(' · ')}</p>
               </div>
               <span className="text-base font-semibold">
                 <Money amount={record.total} />

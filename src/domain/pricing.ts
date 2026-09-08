@@ -1,5 +1,7 @@
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule } from '../types/discount'
+import type { Label } from '../types/label'
+import type { ItemSelector } from '../types/selector'
 import type { AppliedDiscount, CartLine, SaleLineItem } from '../types/sale'
 
 export interface EvaluatedSale {
@@ -11,8 +13,16 @@ export interface EvaluatedSale {
 }
 
 interface Unit {
+  itemId: string
   categoryId: string
+  labelIds: string[]
   unitPriceAgorot: number
+}
+
+interface NameMaps {
+  categoryById: Map<string, Category>
+  labelById: Map<string, Label>
+  itemById: Map<string, CatalogItem>
 }
 
 function toAgorot(shekels: number): number {
@@ -27,34 +37,65 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled discount rule kind: ${JSON.stringify(value)}`)
 }
 
-function describeDiscount(
-  rule: DiscountRule,
-  categoryById: Map<string, Category>,
-): string {
-  if (rule.kind === 'categoryStep') {
-    const categoryName = categoryById.get(rule.categoryId)?.name ?? ''
+function matchesSelector(unit: Unit, selector: ItemSelector): boolean {
+  switch (selector.type) {
+    case 'category':
+      return selector.categoryIds.includes(unit.categoryId)
+    case 'label':
+      return selector.labelIds.some((labelId) => unit.labelIds.includes(labelId))
+    case 'item':
+      return selector.itemIds.includes(unit.itemId)
+    default:
+      return assertNever(selector)
+  }
+}
+
+function describeSelector(selector: ItemSelector, maps: NameMaps): string {
+  switch (selector.type) {
+    case 'category':
+      return selector.categoryIds
+        .map((id) => maps.categoryById.get(id)?.name)
+        .filter((name): name is string => Boolean(name))
+        .join(', ')
+    case 'label':
+      return selector.labelIds
+        .map((id) => maps.labelById.get(id)?.name)
+        .filter((name): name is string => Boolean(name))
+        .join(', ')
+    case 'item':
+      return selector.itemIds
+        .map((id) => maps.itemById.get(id)?.name)
+        .filter((name): name is string => Boolean(name))
+        .join(', ')
+    default:
+      return assertNever(selector)
+  }
+}
+
+function describeDiscount(rule: DiscountRule, maps: NameMaps): string {
+  const targetLabel = describeSelector(rule.target, maps)
+  if (rule.kind === 'stepDiscount') {
     const discountLabel =
       rule.discount.kind === 'flat'
         ? `${rule.discount.amount}₪`
         : `${rule.discount.percent}%`
-    return `${categoryName}: הנחה של ${discountLabel} מהפריט ה-${rule.startFromNth} ואילך`
+    return `${targetLabel}: הנחה של ${discountLabel} מהפריט ה-${rule.startFromNth} ואילך`
   }
 
-  const categoryNames = rule.categoryIds
-    .map((id) => categoryById.get(id)?.name)
-    .filter((name): name is string => Boolean(name))
-    .join(', ')
-  return `${rule.bundleSize} יחידות מ-${categoryNames} במחיר חבילה ${rule.bundlePrice}₪`
+  return `${rule.bundleSize} יחידות מ-${targetLabel} במחיר חבילה ${rule.bundlePrice}₪`
 }
 
 export function evaluateSale(
   cart: CartLine[],
   categories: Category[],
   items: CatalogItem[],
+  labels: Label[],
   rules: DiscountRule[],
 ): EvaluatedSale {
   const itemById = new Map(items.map((item) => [item.id, item]))
   const categoryById = new Map(categories.map((category) => [category.id, category]))
+  const labelById = new Map(labels.map((label) => [label.id, label]))
+  const maps: NameMaps = { categoryById, labelById, itemById }
 
   const lines: SaleLineItem[] = []
   const units: Unit[] = []
@@ -75,7 +116,12 @@ export function evaluateSale(
     })
 
     for (let i = 0; i < cartLine.qty; i++) {
-      units.push({ categoryId: item.categoryId, unitPriceAgorot })
+      units.push({
+        itemId: item.id,
+        categoryId: item.categoryId,
+        labelIds: item.labelIds,
+        unitPriceAgorot,
+      })
     }
   }
 
@@ -87,7 +133,7 @@ export function evaluateSale(
 
     if (rule.trigger) {
       const triggerQty = units.filter((unit) =>
-        rule.trigger!.categoryIds.includes(unit.categoryId),
+        matchesSelector(unit, rule.trigger!.selector),
       ).length
       if (triggerQty < (rule.trigger.minQty ?? 1)) continue
     }
@@ -95,12 +141,12 @@ export function evaluateSale(
     let discountAgorot = 0
 
     switch (rule.kind) {
-      case 'categoryStep': {
-        const categoryUnits = units
-          .filter((unit) => unit.categoryId === rule.categoryId)
+      case 'stepDiscount': {
+        const targetUnits = units
+          .filter((unit) => matchesSelector(unit, rule.target))
           .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
-        if (categoryUnits.length >= rule.startFromNth) {
-          const qualifying = categoryUnits.slice(rule.startFromNth - 1)
+        if (targetUnits.length >= rule.startFromNth) {
+          const qualifying = targetUnits.slice(rule.startFromNth - 1)
           for (const unit of qualifying) {
             const perUnit =
               rule.discount.kind === 'flat'
@@ -112,12 +158,12 @@ export function evaluateSale(
         break
       }
       case 'bundlePrice': {
-        const bundleUnits = units
-          .filter((unit) => rule.categoryIds.includes(unit.categoryId))
+        const targetUnits = units
+          .filter((unit) => matchesSelector(unit, rule.target))
           .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
-        const numBundles = Math.floor(bundleUnits.length / rule.bundleSize)
+        const numBundles = Math.floor(targetUnits.length / rule.bundleSize)
         if (numBundles > 0) {
-          const qualifying = bundleUnits.slice(0, numBundles * rule.bundleSize)
+          const qualifying = targetUnits.slice(0, numBundles * rule.bundleSize)
           const qualifyingTotal = qualifying.reduce(
             (sum, unit) => sum + unit.unitPriceAgorot,
             0,
@@ -138,7 +184,7 @@ export function evaluateSale(
         ruleId: rule.id,
         ruleName: rule.name,
         amount: fromAgorot(discountAgorot),
-        description: describeDiscount(rule, categoryById),
+        description: describeDiscount(rule, maps),
       })
     }
   }

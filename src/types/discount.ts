@@ -1,9 +1,11 @@
+import type { ItemSelector } from './selector'
+
 export type DiscountValue =
   | { kind: 'flat'; amount: number }
   | { kind: 'percent'; percent: number }
 
 export interface TriggerCondition {
-  categoryIds: string[]
+  selector: ItemSelector
   minQty?: number
 }
 
@@ -17,22 +19,22 @@ interface DiscountRuleBase {
   updatedAt: string
 }
 
-export interface CategoryStepRule extends DiscountRuleBase {
-  kind: 'categoryStep'
-  categoryId: string
+export interface StepDiscountRule extends DiscountRuleBase {
+  kind: 'stepDiscount'
+  target: ItemSelector
   startFromNth: number
   discount: DiscountValue
 }
 
 export interface BundlePriceRule extends DiscountRuleBase {
   kind: 'bundlePrice'
-  categoryIds: string[]
+  target: ItemSelector
   bundleSize: number
   bundlePrice: number
 }
 
-export type DiscountRule = CategoryStepRule | BundlePriceRule
+export type DiscountRule = StepDiscountRule | BundlePriceRule
 
 export type DiscountRuleDraft =
-  | Omit<CategoryStepRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>
+  | Omit<StepDiscountRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>
   | Omit<BundlePriceRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>

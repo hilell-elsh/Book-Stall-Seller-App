@@ -1,42 +1,57 @@
 import { useState } from 'react'
-import type { Category } from '../../types/catalog'
+import type { Category, CatalogItem } from '../../types/catalog'
 import type { DiscountRule, DiscountRuleDraft } from '../../types/discount'
+import type { Label } from '../../types/label'
+import type { ItemSelector } from '../../types/selector'
+import { TargetPicker } from './TargetPicker'
 
-type Kind = 'categoryStep' | 'bundlePrice'
+type Kind = 'stepDiscount' | 'bundlePrice'
 
 interface DiscountRuleFormProps {
   categories: Category[]
+  labels: Label[]
+  items: CatalogItem[]
   initial?: DiscountRule
   onSave: (draft: DiscountRuleDraft) => void
   onCancel: () => void
 }
 
-function toggleInArray(list: string[], id: string): string[] {
-  return list.includes(id) ? list.filter((entry) => entry !== id) : [...list, id]
+function selectorIsEmpty(selector: ItemSelector): boolean {
+  switch (selector.type) {
+    case 'category':
+      return selector.categoryIds.length === 0
+    case 'label':
+      return selector.labelIds.length === 0
+    case 'item':
+      return selector.itemIds.length === 0
+  }
 }
+
+const emptySelector: ItemSelector = { type: 'category', categoryIds: [] }
 
 export function DiscountRuleForm({
   categories,
+  labels,
+  items,
   initial,
   onSave,
   onCancel,
 }: DiscountRuleFormProps) {
   const [name, setName] = useState(initial?.name ?? '')
-  const [kind, setKind] = useState<Kind>(initial?.kind ?? 'categoryStep')
+  const [kind, setKind] = useState<Kind>(initial?.kind ?? 'stepDiscount')
   const [enabled, setEnabled] = useState(initial?.enabled ?? true)
   const [error, setError] = useState('')
 
-  const [stepCategoryId, setStepCategoryId] = useState(
-    initial?.kind === 'categoryStep' ? initial.categoryId : (categories[0]?.id ?? ''),
-  )
+  const [target, setTarget] = useState<ItemSelector>(initial?.target ?? emptySelector)
+
   const [startFromNth, setStartFromNth] = useState(
-    initial?.kind === 'categoryStep' ? String(initial.startFromNth) : '2',
+    initial?.kind === 'stepDiscount' ? String(initial.startFromNth) : '2',
   )
   const [discountKind, setDiscountKind] = useState<'flat' | 'percent'>(
-    initial?.kind === 'categoryStep' ? initial.discount.kind : 'flat',
+    initial?.kind === 'stepDiscount' ? initial.discount.kind : 'flat',
   )
   const [discountValue, setDiscountValue] = useState(
-    initial?.kind === 'categoryStep'
+    initial?.kind === 'stepDiscount'
       ? String(
           initial.discount.kind === 'flat'
             ? initial.discount.amount
@@ -45,9 +60,6 @@ export function DiscountRuleForm({
       : '',
   )
 
-  const [bundleCategoryIds, setBundleCategoryIds] = useState<string[]>(
-    initial?.kind === 'bundlePrice' ? initial.categoryIds : [],
-  )
   const [bundleSize, setBundleSize] = useState(
     initial?.kind === 'bundlePrice' ? String(initial.bundleSize) : '3',
   )
@@ -56,8 +68,8 @@ export function DiscountRuleForm({
   )
 
   const [triggerEnabled, setTriggerEnabled] = useState(Boolean(initial?.trigger))
-  const [triggerCategoryIds, setTriggerCategoryIds] = useState<string[]>(
-    initial?.trigger?.categoryIds ?? [],
+  const [triggerSelector, setTriggerSelector] = useState<ItemSelector>(
+    initial?.trigger?.selector ?? emptySelector,
   )
   const [triggerMinQty, setTriggerMinQty] = useState(
     initial?.trigger?.minQty ? String(initial.trigger.minQty) : '1',
@@ -70,21 +82,22 @@ export function DiscountRuleForm({
       return
     }
 
+    if (selectorIsEmpty(target)) {
+      setError('יש לבחור לפחות פריט/קטגוריה/תווית אחד עבור ההנחה')
+      return
+    }
+
     const trigger =
-      triggerEnabled && triggerCategoryIds.length > 0
+      triggerEnabled && !selectorIsEmpty(triggerSelector)
         ? {
-            categoryIds: triggerCategoryIds,
+            selector: triggerSelector,
             minQty: Math.max(1, Number(triggerMinQty) || 1),
           }
         : undefined
 
-    if (kind === 'categoryStep') {
+    if (kind === 'stepDiscount') {
       const startNum = Number(startFromNth)
       const valueNum = Number(discountValue)
-      if (!stepCategoryId) {
-        setError('יש לבחור קטגוריה')
-        return
-      }
       if (!Number.isInteger(startNum) || startNum < 1) {
         setError('"החל מפריט מספר" חייב להיות מספר שלם 1 ומעלה')
         return
@@ -99,11 +112,11 @@ export function DiscountRuleForm({
       }
       setError('')
       onSave({
-        kind: 'categoryStep',
+        kind: 'stepDiscount',
         name: trimmedName,
         enabled,
         trigger,
-        categoryId: stepCategoryId,
+        target,
         startFromNth: startNum,
         discount:
           discountKind === 'flat'
@@ -115,10 +128,6 @@ export function DiscountRuleForm({
 
     const sizeNum = Number(bundleSize)
     const priceNum = Number(bundlePrice)
-    if (bundleCategoryIds.length === 0) {
-      setError('יש לבחור לפחות קטגוריה אחת')
-      return
-    }
     if (!Number.isInteger(sizeNum) || sizeNum < 2) {
       setError('גודל החבילה חייב להיות מספר שלם 2 ומעלה')
       return
@@ -133,7 +142,7 @@ export function DiscountRuleForm({
       name: trimmedName,
       enabled,
       trigger,
-      categoryIds: bundleCategoryIds,
+      target,
       bundleSize: sizeNum,
       bundlePrice: priceNum,
     })
@@ -158,89 +167,68 @@ export function DiscountRuleForm({
           onChange={(e) => setKind(e.target.value as Kind)}
           className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
         >
-          <option value="categoryStep">הנחה מדורגת לפי קטגוריה</option>
+          <option value="stepDiscount">הנחה מדורגת</option>
           <option value="bundlePrice">מחיר חבילה</option>
         </select>
       </div>
 
-      {kind === 'categoryStep' && (
-        <div className="space-y-3 rounded border border-gray-100 bg-gray-50 p-2">
-          <div>
-            <label className="block text-sm text-gray-600">קטגוריה</label>
-            <select
-              value={stepCategoryId}
-              onChange={(e) => setStepCategoryId(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
-            >
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600">החל מפריט מספר</label>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={startFromNth}
-              onChange={(e) => setStartFromNth(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+      <div className="space-y-3 rounded border border-gray-100 bg-gray-50 p-2">
+        <div>
+          <span className="block text-sm text-gray-600">על מה חלה ההנחה</span>
+          <div className="mt-1">
+            <TargetPicker
+              categories={categories}
+              labels={labels}
+              items={items}
+              value={target}
+              onChange={setTarget}
             />
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600">סוג הנחה</label>
-              <select
-                value={discountKind}
-                onChange={(e) => setDiscountKind(e.target.value as 'flat' | 'percent')}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
-              >
-                <option value="flat">סכום קבוע (₪)</option>
-                <option value="percent">אחוז (%)</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm text-gray-600">
-                {discountKind === 'flat' ? 'סכום ההנחה (₪)' : 'אחוז ההנחה (%)'}
-              </label>
+        </div>
+
+        {kind === 'stepDiscount' && (
+          <>
+            <div>
+              <label className="block text-sm text-gray-600">החל מפריט מספר</label>
               <input
                 type="number"
-                min="0"
-                step="0.5"
-                value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
+                min="1"
+                step="1"
+                value={startFromNth}
+                onChange={(e) => setStartFromNth(e.target.value)}
                 className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
               />
             </div>
-          </div>
-        </div>
-      )}
-
-      {kind === 'bundlePrice' && (
-        <div className="space-y-3 rounded border border-gray-100 bg-gray-50 p-2">
-          <div>
-            <span className="block text-sm text-gray-600">קטגוריות בחבילה</span>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <label
-                  key={category.id}
-                  className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm text-gray-600">סוג הנחה</label>
+                <select
+                  value={discountKind}
+                  onChange={(e) => setDiscountKind(e.target.value as 'flat' | 'percent')}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
                 >
-                  <input
-                    type="checkbox"
-                    checked={bundleCategoryIds.includes(category.id)}
-                    onChange={() =>
-                      setBundleCategoryIds((prev) => toggleInArray(prev, category.id))
-                    }
-                  />
-                  {category.name}
+                  <option value="flat">סכום קבוע (₪)</option>
+                  <option value="percent">אחוז (%)</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm text-gray-600">
+                  {discountKind === 'flat' ? 'סכום ההנחה (₪)' : 'אחוז ההנחה (%)'}
                 </label>
-              ))}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                />
+              </div>
             </div>
-          </div>
+          </>
+        )}
+
+        {kind === 'bundlePrice' && (
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-sm text-gray-600">גודל חבילה (יחידות)</label>
@@ -265,8 +253,8 @@ export function DiscountRuleForm({
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="rounded border border-gray-100 bg-gray-50 p-2">
         <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -275,27 +263,17 @@ export function DiscountRuleForm({
             checked={triggerEnabled}
             onChange={(e) => setTriggerEnabled(e.target.checked)}
           />
-          המבצע פעיל רק אם נקנה גם פריט מקטגוריה מסוימת
+          המבצע פעיל רק אם נקנה גם פריט מסוים
         </label>
         {triggerEnabled && (
           <div className="mt-2 space-y-2">
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <label
-                  key={category.id}
-                  className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={triggerCategoryIds.includes(category.id)}
-                    onChange={() =>
-                      setTriggerCategoryIds((prev) => toggleInArray(prev, category.id))
-                    }
-                  />
-                  {category.name}
-                </label>
-              ))}
-            </div>
+            <TargetPicker
+              categories={categories}
+              labels={labels}
+              items={items}
+              value={triggerSelector}
+              onChange={setTriggerSelector}
+            />
             <div>
               <label className="block text-sm text-gray-600">כמות מינימלית להפעלה</label>
               <input

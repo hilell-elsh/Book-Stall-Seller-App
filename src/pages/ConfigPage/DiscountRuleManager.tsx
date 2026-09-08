@@ -7,6 +7,8 @@ import { DiscountRuleForm } from './DiscountRuleForm'
 export function DiscountRuleManager() {
   const {
     categories,
+    labels,
+    items,
     discountRules,
     addDiscountRule,
     updateDiscountRule,
@@ -25,6 +27,8 @@ export function DiscountRuleManager() {
         </h2>
         <DiscountRuleForm
           categories={categories}
+          labels={labels}
+          items={items}
           initial={editing === 'new' ? undefined : editing}
           onCancel={() => setEditing(null)}
           onSave={(draft) => {

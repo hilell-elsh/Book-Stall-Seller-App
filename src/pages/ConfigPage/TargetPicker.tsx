@@ -1,0 +1,112 @@
+import type { Category, CatalogItem } from '../../types/catalog'
+import type { Label } from '../../types/label'
+import type { ItemSelector } from '../../types/selector'
+
+interface TargetPickerProps {
+  categories: Category[]
+  labels: Label[]
+  items: CatalogItem[]
+  value: ItemSelector
+  onChange: (next: ItemSelector) => void
+}
+
+function toggleInArray(list: string[], id: string): string[] {
+  return list.includes(id) ? list.filter((entry) => entry !== id) : [...list, id]
+}
+
+export function TargetPicker({ categories, labels, items, value, onChange }: TargetPickerProps) {
+  return (
+    <div className="space-y-2">
+      <select
+        value={value.type}
+        onChange={(e) => {
+          const type = e.target.value as ItemSelector['type']
+          if (type === 'category') onChange({ type, categoryIds: [] })
+          else if (type === 'label') onChange({ type, labelIds: [] })
+          else onChange({ type, itemIds: [] })
+        }}
+        className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
+      >
+        <option value="category">קטגוריה</option>
+        <option value="label">תווית</option>
+        <option value="item">פריט ספציפי</option>
+      </select>
+
+      {value.type === 'category' && (
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <label
+              key={category.id}
+              className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={value.categoryIds.includes(category.id)}
+                onChange={() =>
+                  onChange({ type: 'category', categoryIds: toggleInArray(value.categoryIds, category.id) })
+                }
+              />
+              {category.name}
+            </label>
+          ))}
+          {categories.length === 0 && (
+            <p className="text-sm text-gray-400">אין עדיין קטגוריות.</p>
+          )}
+        </div>
+      )}
+
+      {value.type === 'label' && (
+        <div className="flex flex-wrap gap-2">
+          {labels.map((label) => (
+            <label
+              key={label.id}
+              className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={value.labelIds.includes(label.id)}
+                onChange={() =>
+                  onChange({ type: 'label', labelIds: toggleInArray(value.labelIds, label.id) })
+                }
+              />
+              {label.name}
+            </label>
+          ))}
+          {labels.length === 0 && <p className="text-sm text-gray-400">אין עדיין תוויות.</p>}
+        </div>
+      )}
+
+      {value.type === 'item' && (
+        <div className="space-y-2">
+          {categories.map((category) => {
+            const categoryItems = items.filter((item) => item.categoryId === category.id)
+            if (categoryItems.length === 0) return null
+            return (
+              <div key={category.id}>
+                <span className="text-xs text-gray-500">{category.name}</span>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {categoryItems.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value.itemIds.includes(item.id)}
+                        onChange={() =>
+                          onChange({ type: 'item', itemIds: toggleInArray(value.itemIds, item.id) })
+                        }
+                      />
+                      {item.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          {items.length === 0 && <p className="text-sm text-gray-400">אין עדיין פריטים.</p>}
+        </div>
+      )}
+    </div>
+  )
+}

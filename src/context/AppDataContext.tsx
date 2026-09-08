@@ -8,6 +8,8 @@ import {
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
 import type { Category, CatalogItem } from '../types/catalog'
+import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
+import type { Label } from '../types/label'
 
 interface AppDataContextValue {
   categories: Category[]
@@ -19,10 +21,22 @@ interface AppDataContextValue {
   addItem: (categoryId: string, name: string, price: number) => void
   updateItem: (
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId'>>,
+    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds'>>,
   ) => void
   deleteItem: (id: string) => void
   moveItem: (id: string, direction: 'up' | 'down') => void
+  changeItemCategory: (id: string, categoryId: string) => void
+  discountRules: DiscountRule[]
+  addDiscountRule: (draft: DiscountRuleDraft) => void
+  updateDiscountRule: (id: string, draft: DiscountRuleDraft) => void
+  deleteDiscountRule: (id: string) => void
+  toggleDiscountRule: (id: string) => void
+  moveDiscountRule: (id: string, direction: 'up' | 'down') => void
+  labels: Label[]
+  addLabel: (name: string) => void
+  renameLabel: (id: string, name: string) => void
+  deleteLabel: (id: string) => void
+  toggleItemLabel: (itemId: string, labelId: string) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -60,6 +74,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CatalogItem[]>(() =>
     sortByOrder(store.getItems()),
   )
+  const [discountRules, setDiscountRules] = useState<DiscountRule[]>(() =>
+    sortByOrder(store.getDiscountRules()),
+  )
+  const [labels, setLabels] = useState<Label[]>(() => store.getLabels())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -69,6 +87,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function persistItems(next: CatalogItem[]) {
     setItems(next)
     store.saveItems(next)
+  }
+
+  function persistDiscountRules(next: DiscountRule[]) {
+    setDiscountRules(next)
+    store.saveDiscountRules(next)
+  }
+
+  function persistLabels(next: Label[]) {
+    setLabels(next)
+    store.saveLabels(next)
   }
 
   function addCategory(name: string) {
@@ -112,6 +140,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       price,
       order: nextOrder,
       active: true,
+      labelIds: [],
       createdAt: now(),
       updatedAt: now(),
     }
@@ -120,7 +149,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function updateItem(
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId'>>,
+    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds'>>,
   ) {
     persistItems(
       items.map((item) =>
@@ -133,12 +162,106 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistItems(items.filter((item) => item.id !== id))
   }
 
+  function changeItemCategory(id: string, categoryId: string) {
+    const item = items.find((entry) => entry.id === id)
+    if (!item || item.categoryId === categoryId) return
+    const siblings = items.filter((entry) => entry.categoryId === categoryId)
+    const nextOrder = siblings.length
+      ? Math.max(...siblings.map((entry) => entry.order)) + 1
+      : 0
+    persistItems(
+      items.map((entry) =>
+        entry.id === id
+          ? { ...entry, categoryId, order: nextOrder, updatedAt: now() }
+          : entry,
+      ),
+    )
+  }
+
   function moveItem(id: string, direction: 'up' | 'down') {
     const item = items.find((entry) => entry.id === id)
     if (!item) return
     const siblings = items.filter((entry) => entry.categoryId === item.categoryId)
     const others = items.filter((entry) => entry.categoryId !== item.categoryId)
     persistItems([...others, ...reorder(siblings, id, direction)])
+  }
+
+  function addDiscountRule(draft: DiscountRuleDraft) {
+    const nextOrder = discountRules.length
+      ? Math.max(...discountRules.map((rule) => rule.order)) + 1
+      : 0
+    const rule = {
+      ...draft,
+      id: newId(),
+      order: nextOrder,
+      createdAt: now(),
+      updatedAt: now(),
+    } as DiscountRule
+    persistDiscountRules([...discountRules, rule])
+  }
+
+  function updateDiscountRule(id: string, draft: DiscountRuleDraft) {
+    persistDiscountRules(
+      discountRules.map((rule) =>
+        rule.id === id
+          ? ({
+              ...draft,
+              id: rule.id,
+              order: rule.order,
+              createdAt: rule.createdAt,
+              updatedAt: now(),
+            } as DiscountRule)
+          : rule,
+      ),
+    )
+  }
+
+  function deleteDiscountRule(id: string) {
+    persistDiscountRules(discountRules.filter((rule) => rule.id !== id))
+  }
+
+  function toggleDiscountRule(id: string) {
+    persistDiscountRules(
+      discountRules.map((rule) =>
+        rule.id === id ? { ...rule, enabled: !rule.enabled, updatedAt: now() } : rule,
+      ),
+    )
+  }
+
+  function moveDiscountRule(id: string, direction: 'up' | 'down') {
+    persistDiscountRules(reorder(discountRules, id, direction))
+  }
+
+  function addLabel(name: string) {
+    const label: Label = { id: newId(), name, createdAt: now(), updatedAt: now() }
+    persistLabels([...labels, label])
+  }
+
+  function renameLabel(id: string, name: string) {
+    persistLabels(
+      labels.map((label) => (label.id === id ? { ...label, name, updatedAt: now() } : label)),
+    )
+  }
+
+  function deleteLabel(id: string) {
+    persistLabels(labels.filter((label) => label.id !== id))
+    // Unlink rather than cascade-delete: removing a label shouldn't remove the items wearing it.
+    persistItems(
+      items.map((item) =>
+        item.labelIds.includes(id)
+          ? { ...item, labelIds: item.labelIds.filter((labelId) => labelId !== id), updatedAt: now() }
+          : item,
+      ),
+    )
+  }
+
+  function toggleItemLabel(itemId: string, labelId: string) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item) return
+    const nextLabelIds = item.labelIds.includes(labelId)
+      ? item.labelIds.filter((id) => id !== labelId)
+      : [...item.labelIds, labelId]
+    updateItem(itemId, { labelIds: nextLabelIds })
   }
 
   const value = useMemo<AppDataContextValue>(
@@ -153,8 +276,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateItem,
       deleteItem,
       moveItem,
+      changeItemCategory,
+      discountRules: sortByOrder(discountRules),
+      addDiscountRule,
+      updateDiscountRule,
+      deleteDiscountRule,
+      toggleDiscountRule,
+      moveDiscountRule,
+      labels,
+      addLabel,
+      renameLabel,
+      deleteLabel,
+      toggleItemLabel,
     }),
-    [categories, items],
+    [categories, items, discountRules, labels],
   )
 
   return (

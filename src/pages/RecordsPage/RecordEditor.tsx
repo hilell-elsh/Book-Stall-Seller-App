@@ -14,18 +14,18 @@ interface RecordEditorProps {
 }
 
 export function RecordEditor({ record, onClose }: RecordEditorProps) {
-  const { categories, items, labels, paymentMethods, receivers, updateSaleRecord, deleteSaleRecord } =
+  const { categories, items, labels, paymentMethods, updateSaleRecord, deleteSaleRecord } =
     useAppData()
   const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
-  const [receiverId, setReceiverId] = useState(record.receiverId ?? '')
+  const [receiver, setReceiver] = useState(record.receiver ?? '')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiverId !== ''
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
 
   function handleSave() {
     if (!canSave) return
-    updateSaleRecord(record.id, { ...cart.evaluated, paymentMethodId, receiverId })
+    updateSaleRecord(record.id, { ...cart.evaluated, paymentMethodId, receiver: receiver.trim() })
     onClose()
   }
 
@@ -66,11 +66,10 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
         </div>
         <PaymentSelector
           paymentMethods={paymentMethods}
-          receivers={receivers}
           paymentMethodId={paymentMethodId}
-          receiverId={receiverId}
+          receiver={receiver}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiverId}
+          onReceiverChange={setReceiver}
         />
         <SaleSummary
           evaluated={cart.evaluated}

@@ -3,7 +3,6 @@ import { DiscountRuleManager } from './DiscountRuleManager'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
 import { PaymentMethodManager } from './PaymentMethodManager'
-import { ReceiverManager } from './ReceiverManager'
 
 export function ConfigPage() {
   return (
@@ -15,7 +14,6 @@ export function ConfigPage() {
         <ItemManager />
         <DiscountRuleManager />
         <PaymentMethodManager />
-        <ReceiverManager />
       </div>
     </div>
   )

@@ -11,18 +11,18 @@ interface SalePageProps {
 }
 
 export function SalePage({ cart }: SalePageProps) {
-  const { categories, items, labels, paymentMethods, receivers, addSaleRecord } = useAppData()
+  const { categories, items, labels, paymentMethods, addSaleRecord } = useAppData()
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [receiverId, setReceiverId] = useState('')
+  const [receiver, setReceiver] = useState('')
 
-  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiverId !== ''
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
 
   function handleSave() {
     if (!canSave) return
-    addSaleRecord({ ...cart.evaluated, paymentMethodId, receiverId })
+    addSaleRecord({ ...cart.evaluated, paymentMethodId, receiver: receiver.trim() })
     cart.clear()
     setPaymentMethodId('')
-    setReceiverId('')
+    setReceiver('')
   }
 
   if (categories.length === 0) {
@@ -52,11 +52,10 @@ export function SalePage({ cart }: SalePageProps) {
         </div>
         <PaymentSelector
           paymentMethods={paymentMethods}
-          receivers={receivers}
           paymentMethodId={paymentMethodId}
-          receiverId={receiverId}
+          receiver={receiver}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiverId}
+          onReceiverChange={setReceiver}
         />
         <SaleSummary
           evaluated={cart.evaluated}

@@ -25,7 +25,7 @@ export interface SaleRecord {
   createdAt: string
   updatedAt: string
   paymentMethodId?: string
-  receiverId?: string
+  receiver?: string
   lines: SaleLineItem[]
   discounts: AppliedDiscount[]
   subtotal: number

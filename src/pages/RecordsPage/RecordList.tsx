@@ -10,9 +10,8 @@ interface RecordListProps {
 const dateFormatter = new Intl.DateTimeFormat('he-IL', { dateStyle: 'short', timeStyle: 'short' })
 
 export function RecordList({ records, onSelect }: RecordListProps) {
-  const { paymentMethods, receivers } = useAppData()
+  const { paymentMethods } = useAppData()
   const paymentMethodById = new Map(paymentMethods.map((method) => [method.id, method]))
-  const receiverById = new Map(receivers.map((receiver) => [receiver.id, receiver]))
   const sorted = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   if (sorted.length === 0) {
@@ -26,14 +25,9 @@ export function RecordList({ records, onSelect }: RecordListProps) {
         const paymentMethodName = record.paymentMethodId
           ? paymentMethodById.get(record.paymentMethodId)?.name
           : undefined
-        const receiverName = record.receiverId
-          ? receiverById.get(record.receiverId)?.name
-          : undefined
-        const details = [
-          `${itemCount} פריטים`,
-          paymentMethodName,
-          receiverName,
-        ].filter(Boolean)
+        const details = [`${itemCount} פריטים`, paymentMethodName, record.receiver].filter(
+          Boolean,
+        )
         return (
           <li key={record.id}>
             <button

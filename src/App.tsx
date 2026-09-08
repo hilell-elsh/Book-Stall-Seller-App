@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavTabs, type TabId } from './components/NavTabs'
 import { useCartState } from './hooks/useCartState'
 import { ConfigPage } from './pages/ConfigPage/ConfigPage'
-import { RecordsPage } from './pages/RecordsPage'
+import { RecordsPage } from './pages/RecordsPage/RecordsPage'
 import { SalePage } from './pages/SalePage'
 
 function App() {

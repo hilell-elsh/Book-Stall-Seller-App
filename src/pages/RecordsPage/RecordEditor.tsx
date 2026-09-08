@@ -1,0 +1,73 @@
+import { useState } from 'react'
+import { CartLinesList } from '../../components/cart/CartLinesList'
+import { ItemBrowser } from '../../components/cart/ItemBrowser'
+import { SaleSummary } from '../../components/cart/SaleSummary'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { useAppData } from '../../context/AppDataContext'
+import { useCartState } from '../../hooks/useCartState'
+import type { SaleRecord } from '../../types/sale'
+
+interface RecordEditorProps {
+  record: SaleRecord
+  onClose: () => void
+}
+
+export function RecordEditor({ record, onClose }: RecordEditorProps) {
+  const { categories, items, labels, updateSaleRecord, deleteSaleRecord } = useAppData()
+  const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  function handleSave() {
+    updateSaleRecord(record.id, cart.evaluated)
+    onClose()
+  }
+
+  function handleDelete() {
+    deleteSaleRecord(record.id)
+    onClose()
+  }
+
+  return (
+    <div className="flex min-h-[calc(100vh-49px)] flex-col sm:flex-row">
+      <div className="flex-1">
+        <div className="flex items-center justify-between p-3">
+          <button type="button" onClick={onClose} className="text-sm text-blue-600">
+            → חזרה לרשימה
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            className="rounded border border-red-300 px-3 py-1 text-sm text-red-600"
+          >
+            מחיקת מכירה
+          </button>
+        </div>
+        <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
+      </div>
+
+      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-gray-200">
+        <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
+          <CartLinesList
+            lines={cart.evaluated.lines}
+            onSetQty={cart.setQty}
+            onRemove={cart.removeItem}
+          />
+        </div>
+        <SaleSummary
+          evaluated={cart.evaluated}
+          actionLabel="שמור שינויים"
+          onAction={handleSave}
+          disabled={cart.lines.length === 0}
+        />
+      </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="מחיקת מכירה"
+        message="למחוק את המכירה הזו לצמיתות?"
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={handleDelete}
+      />
+    </div>
+  )
+}

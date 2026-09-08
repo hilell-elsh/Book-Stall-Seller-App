@@ -14,8 +14,8 @@ export function SalePage({ cart }: SalePageProps) {
   const { categories, items, addSaleRecord } = useAppData()
   const [activeCategoryId, setActiveCategoryId] = useState('')
 
-  const currentCategoryId = activeCategoryId || categories[0]?.id || ''
-  const categoryItems = items.filter((item) => item.categoryId === currentCategoryId)
+  const isShowingAll = activeCategoryId === ''
+  const categoryItems = items.filter((item) => item.categoryId === activeCategoryId)
 
   function handleSave() {
     if (cart.lines.length === 0) return
@@ -38,10 +38,27 @@ export function SalePage({ cart }: SalePageProps) {
     <div className="flex min-h-[calc(100vh-49px)] flex-col">
       <CategoryPicker
         categories={categories}
-        activeCategoryId={currentCategoryId}
+        activeCategoryId={activeCategoryId}
         onSelect={setActiveCategoryId}
       />
-      <ItemGrid items={categoryItems} onAdd={cart.addItem} />
+      {isShowingAll ? (
+        <div className="space-y-3">
+          {categories.map((category) => {
+            const itemsInCategory = items.filter((item) => item.categoryId === category.id)
+            if (itemsInCategory.length === 0) return null
+            return (
+              <div key={category.id}>
+                <h2 className="px-3 text-sm font-medium text-gray-600">{category.name}</h2>
+                <div className="mt-1">
+                  <ItemGrid items={itemsInCategory} onAdd={cart.addItem} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <ItemGrid items={categoryItems} onAdd={cart.addItem} />
+      )}
       <div className="mt-3 flex-1">
         <CartLinesList
           lines={cart.evaluated.lines}

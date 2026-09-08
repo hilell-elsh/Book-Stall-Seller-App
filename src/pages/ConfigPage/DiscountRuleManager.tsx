@@ -21,7 +21,7 @@ export function DiscountRuleManager() {
 
   if (editing) {
     return (
-      <section className="mt-6">
+      <section>
         <h2 className="text-base font-semibold">
           {editing === 'new' ? 'מבצע הנחה חדש' : 'עריכת מבצע הנחה'}
         </h2>
@@ -45,7 +45,7 @@ export function DiscountRuleManager() {
   }
 
   return (
-    <section className="mt-6">
+    <section>
       <h2 className="text-base font-semibold">מבצעי הנחה</h2>
 
       {categories.length === 0 ? (
@@ -66,7 +66,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'up')}
                   disabled={index === 0}
-                  className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
                   aria-label="הזז למעלה"
                 >
                   ↑
@@ -75,7 +75,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'down')}
                   disabled={index === discountRules.length - 1}
-                  className="h-9 w-9 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
                   aria-label="הזז למטה"
                 >
                   ↓
@@ -90,7 +90,7 @@ export function DiscountRuleManager() {
                 <button
                   type="button"
                   onClick={() => setPendingDelete(rule)}
-                  className="h-9 w-9 shrink-0 rounded border border-red-300 text-sm text-red-600"
+                  className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
                   aria-label="מחק"
                 >
                   ✕

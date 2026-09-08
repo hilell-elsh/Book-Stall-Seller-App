@@ -7,7 +7,7 @@ export function ConfigPage() {
   return (
     <div className="p-4 pb-8">
       <h1 className="text-lg font-semibold">הגדרות</h1>
-      <div className="mt-3">
+      <div className="mt-3 space-y-6">
         <CategoryManager />
         <LabelManager />
         <ItemManager />

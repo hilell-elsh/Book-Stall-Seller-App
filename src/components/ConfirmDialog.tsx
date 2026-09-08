@@ -24,14 +24,14 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded px-3 py-2 text-sm text-gray-600"
+            className="min-h-11 rounded px-4 text-sm text-gray-600"
           >
             ביטול
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded bg-red-600 px-3 py-2 text-sm font-medium text-white"
+            className="min-h-11 rounded bg-red-600 px-4 text-sm font-medium text-white"
           >
             מחיקה
           </button>

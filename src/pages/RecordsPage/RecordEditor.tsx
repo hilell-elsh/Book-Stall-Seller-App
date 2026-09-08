@@ -31,13 +31,17 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
     <div className="flex min-h-[calc(100vh-49px)] flex-col sm:flex-row">
       <div className="flex-1">
         <div className="flex items-center justify-between p-3">
-          <button type="button" onClick={onClose} className="text-sm text-blue-600">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex min-h-11 items-center text-sm text-blue-600"
+          >
             → חזרה לרשימה
           </button>
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
-            className="rounded border border-red-300 px-3 py-1 text-sm text-red-600"
+            className="flex min-h-11 items-center rounded border border-red-300 px-3 text-sm text-red-600"
           >
             מחיקת מכירה
           </button>

@@ -16,7 +16,7 @@ export function LabelManager() {
   }
 
   return (
-    <section className="mt-6">
+    <section>
       <h2 className="text-base font-semibold">תוויות</h2>
 
       <ul className="mt-2 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
@@ -36,7 +36,7 @@ export function LabelManager() {
             <button
               type="button"
               onClick={() => setPendingDelete(label)}
-              className="h-9 w-9 shrink-0 rounded border border-red-300 text-sm text-red-600"
+              className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
               aria-label="מחק"
             >
               ✕

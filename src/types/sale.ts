@@ -24,7 +24,6 @@ export interface SaleRecord {
   id: string
   createdAt: string
   updatedAt: string
-  recordedBy?: string
   lines: SaleLineItem[]
   discounts: AppliedDiscount[]
   subtotal: number

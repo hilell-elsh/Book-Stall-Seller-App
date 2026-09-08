@@ -10,6 +10,7 @@ import * as store from '../data/store'
 import type { Category, CatalogItem } from '../types/catalog'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
 import type { Label } from '../types/label'
+import type { SaleRecord } from '../types/sale'
 
 interface AppDataContextValue {
   categories: Category[]
@@ -37,6 +38,8 @@ interface AppDataContextValue {
   renameLabel: (id: string, name: string) => void
   deleteLabel: (id: string) => void
   toggleItemLabel: (itemId: string, labelId: string) => void
+  saleRecords: SaleRecord[]
+  addSaleRecord: (record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -78,6 +81,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     sortByOrder(store.getDiscountRules()),
   )
   const [labels, setLabels] = useState<Label[]>(() => store.getLabels())
+  const [saleRecords, setSaleRecords] = useState<SaleRecord[]>(() => store.getSaleRecords())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -97,6 +101,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function persistLabels(next: Label[]) {
     setLabels(next)
     store.saveLabels(next)
+  }
+
+  function persistSaleRecords(next: SaleRecord[]) {
+    setSaleRecords(next)
+    store.saveSaleRecords(next)
   }
 
   function addCategory(name: string) {
@@ -264,6 +273,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateItem(itemId, { labelIds: nextLabelIds })
   }
 
+  function addSaleRecord(record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) {
+    const saleRecord: SaleRecord = {
+      ...record,
+      id: newId(),
+      createdAt: now(),
+      updatedAt: now(),
+    }
+    persistSaleRecords([...saleRecords, saleRecord])
+  }
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -288,8 +307,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       renameLabel,
       deleteLabel,
       toggleItemLabel,
+      saleRecords,
+      addSaleRecord,
     }),
-    [categories, items, discountRules, labels],
+    [categories, items, discountRules, labels, saleRecords],
   )
 
   return (

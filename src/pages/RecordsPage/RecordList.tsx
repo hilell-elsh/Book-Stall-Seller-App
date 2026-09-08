@@ -30,9 +30,7 @@ export function RecordList({ records, onSelect }: RecordListProps) {
                 <p className="text-sm font-medium">
                   {dateFormatter.format(new Date(record.createdAt))}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {itemCount} פריטים{record.recordedBy ? ` · ${record.recordedBy}` : ''}
-                </p>
+                <p className="text-xs text-gray-500">{itemCount} פריטים</p>
               </div>
               <span className="text-base font-semibold">
                 <Money amount={record.total} />

@@ -43,8 +43,6 @@ interface AppDataContextValue {
   addSaleRecord: (record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
   updateSaleRecord: (id: string, evaluated: EvaluatedSale) => void
   deleteSaleRecord: (id: string) => void
-  sellerName: string
-  setSellerName: (name: string) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -87,7 +85,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   )
   const [labels, setLabels] = useState<Label[]>(() => store.getLabels())
   const [saleRecords, setSaleRecords] = useState<SaleRecord[]>(() => store.getSaleRecords())
-  const [sellerName, setSellerNameState] = useState<string>(() => store.getSellerName())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -301,11 +298,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistSaleRecords(saleRecords.filter((record) => record.id !== id))
   }
 
-  function setSellerName(name: string) {
-    setSellerNameState(name)
-    store.saveSellerName(name)
-  }
-
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -334,10 +326,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       addSaleRecord,
       updateSaleRecord,
       deleteSaleRecord,
-      sellerName,
-      setSellerName,
     }),
-    [categories, items, discountRules, labels, saleRecords, sellerName],
+    [categories, items, discountRules, labels, saleRecords],
   )
 
   return (

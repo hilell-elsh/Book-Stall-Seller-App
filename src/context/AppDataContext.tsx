@@ -8,6 +8,7 @@ import {
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
 import type { Category, CatalogItem } from '../types/catalog'
+import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
 
 interface AppDataContextValue {
   categories: Category[]
@@ -23,6 +24,12 @@ interface AppDataContextValue {
   ) => void
   deleteItem: (id: string) => void
   moveItem: (id: string, direction: 'up' | 'down') => void
+  discountRules: DiscountRule[]
+  addDiscountRule: (draft: DiscountRuleDraft) => void
+  updateDiscountRule: (id: string, draft: DiscountRuleDraft) => void
+  deleteDiscountRule: (id: string) => void
+  toggleDiscountRule: (id: string) => void
+  moveDiscountRule: (id: string, direction: 'up' | 'down') => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -60,6 +67,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CatalogItem[]>(() =>
     sortByOrder(store.getItems()),
   )
+  const [discountRules, setDiscountRules] = useState<DiscountRule[]>(() =>
+    sortByOrder(store.getDiscountRules()),
+  )
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -69,6 +79,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function persistItems(next: CatalogItem[]) {
     setItems(next)
     store.saveItems(next)
+  }
+
+  function persistDiscountRules(next: DiscountRule[]) {
+    setDiscountRules(next)
+    store.saveDiscountRules(next)
   }
 
   function addCategory(name: string) {
@@ -141,6 +156,52 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistItems([...others, ...reorder(siblings, id, direction)])
   }
 
+  function addDiscountRule(draft: DiscountRuleDraft) {
+    const nextOrder = discountRules.length
+      ? Math.max(...discountRules.map((rule) => rule.order)) + 1
+      : 0
+    const rule = {
+      ...draft,
+      id: newId(),
+      order: nextOrder,
+      createdAt: now(),
+      updatedAt: now(),
+    } as DiscountRule
+    persistDiscountRules([...discountRules, rule])
+  }
+
+  function updateDiscountRule(id: string, draft: DiscountRuleDraft) {
+    persistDiscountRules(
+      discountRules.map((rule) =>
+        rule.id === id
+          ? ({
+              ...draft,
+              id: rule.id,
+              order: rule.order,
+              createdAt: rule.createdAt,
+              updatedAt: now(),
+            } as DiscountRule)
+          : rule,
+      ),
+    )
+  }
+
+  function deleteDiscountRule(id: string) {
+    persistDiscountRules(discountRules.filter((rule) => rule.id !== id))
+  }
+
+  function toggleDiscountRule(id: string) {
+    persistDiscountRules(
+      discountRules.map((rule) =>
+        rule.id === id ? { ...rule, enabled: !rule.enabled, updatedAt: now() } : rule,
+      ),
+    )
+  }
+
+  function moveDiscountRule(id: string, direction: 'up' | 'down') {
+    persistDiscountRules(reorder(discountRules, id, direction))
+  }
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -153,8 +214,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateItem,
       deleteItem,
       moveItem,
+      discountRules: sortByOrder(discountRules),
+      addDiscountRule,
+      updateDiscountRule,
+      deleteDiscountRule,
+      toggleDiscountRule,
+      moveDiscountRule,
     }),
-    [categories, items],
+    [categories, items, discountRules],
   )
 
   return (

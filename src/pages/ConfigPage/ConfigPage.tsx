@@ -1,4 +1,5 @@
 import { CategoryManager } from './CategoryManager'
+import { DiscountRuleManager } from './DiscountRuleManager'
 import { ItemManager } from './ItemManager'
 
 export function ConfigPage() {
@@ -8,6 +9,7 @@ export function ConfigPage() {
       <div className="mt-3">
         <CategoryManager />
         <ItemManager />
+        <DiscountRuleManager />
       </div>
     </div>
   )

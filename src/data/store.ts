@@ -1,8 +1,10 @@
 import type { Category, CatalogItem } from '../types/catalog'
+import type { DiscountRule } from '../types/discount'
 import { readJSON, writeJSON } from './localStorageDriver'
 
 const CATEGORIES_KEY = 'categories'
 const ITEMS_KEY = 'items'
+const DISCOUNT_RULES_KEY = 'discountRules'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -18,4 +20,12 @@ export function getItems(): CatalogItem[] {
 
 export function saveItems(items: CatalogItem[]): void {
   writeJSON(ITEMS_KEY, items)
+}
+
+export function getDiscountRules(): DiscountRule[] {
+  return readJSON<DiscountRule[]>(DISCOUNT_RULES_KEY, [])
+}
+
+export function saveDiscountRules(rules: DiscountRule[]): void {
+  writeJSON(DISCOUNT_RULES_KEY, rules)
 }

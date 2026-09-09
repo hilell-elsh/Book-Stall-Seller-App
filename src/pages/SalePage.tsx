@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { CartLinesList } from '../components/cart/CartLinesList'
 import { ItemBrowser } from '../components/cart/ItemBrowser'
+import { ManualAdjustments } from '../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../components/cart/MobileCartBar'
 import { PaymentSelector } from '../components/cart/PaymentSelector'
 import { SaleSummary } from '../components/cart/SaleSummary'
@@ -23,7 +24,14 @@ export function SalePage({ cart }: SalePageProps) {
 
   function handleSave() {
     if (!canSave) return
-    addSaleRecord({ ...cart.evaluated, eventName, paymentMethodId, receiver: receiver.trim() })
+    addSaleRecord({
+      ...cart.evaluated,
+      eventName,
+      paymentMethodId,
+      receiver: receiver.trim(),
+      manualDiscount: cart.manualDiscount ?? undefined,
+      comment: cart.comment.trim() || undefined,
+    })
     cart.clear()
     setPaymentMethodId('')
     setReceiver('')
@@ -69,6 +77,12 @@ export function SalePage({ cart }: SalePageProps) {
             onRemove={cart.removeItem}
           />
         </div>
+        <ManualAdjustments
+          manualDiscount={cart.manualDiscount}
+          comment={cart.comment}
+          onManualDiscountChange={cart.setManualDiscount}
+          onCommentChange={cart.setComment}
+        />
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}

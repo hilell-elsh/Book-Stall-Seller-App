@@ -15,6 +15,11 @@ interface DiscountRuleBase {
   enabled: boolean
   order: number
   trigger?: TriggerCondition
+  // true (default): this discount can combine with other discounts on the
+  // same items. false: items it discounts cannot also receive any other
+  // discount — see evaluateSale in domain/pricing.ts for how conflicts
+  // between exclusive rules are resolved.
+  stackable: boolean
   createdAt: string
   updatedAt: string
 }

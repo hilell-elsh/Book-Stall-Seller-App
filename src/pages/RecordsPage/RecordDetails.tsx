@@ -85,6 +85,10 @@ export function RecordDetails({ record, onEdit, onClose }: RecordDetailsProps) {
         </div>
       )}
 
+      {record.comment && (
+        <p className="mt-2 text-sm text-muted">הערה: {record.comment}</p>
+      )}
+
       {payouts.length > 0 && (
         <div className="mt-2 space-y-1 border-t border-line pt-2">
           <p className="text-sm text-muted">פיצול ליוצרים</p>

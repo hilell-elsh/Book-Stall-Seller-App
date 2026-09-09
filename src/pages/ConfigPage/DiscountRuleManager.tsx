@@ -84,6 +84,11 @@ export function DiscountRuleManager() {
                     className="h-5 w-5 shrink-0"
                   />
                   <span className="min-w-0 flex-1 truncate text-sm">{rule.name}</span>
+                  {!rule.stackable && (
+                    <span className="shrink-0 rounded bg-line px-1.5 py-0.5 text-xs text-muted">
+                      בלעדי
+                    </span>
+                  )}
                 </div>
                 <div className="flex w-full justify-end gap-2 sm:w-auto">
                   <button

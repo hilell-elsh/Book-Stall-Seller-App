@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { CartLinesList } from '../../components/cart/CartLinesList'
 import { ItemBrowser } from '../../components/cart/ItemBrowser'
+import { ManualAdjustments } from '../../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../../components/cart/MobileCartBar'
 import { PaymentSelector } from '../../components/cart/PaymentSelector'
 import { SaleSummary } from '../../components/cart/SaleSummary'
@@ -16,7 +17,11 @@ interface RecordEditorProps {
 export function RecordEditor({ record, onDone }: RecordEditorProps) {
   const { categories, items, labels, creators, paymentMethods, eventName, updateSaleRecord } =
     useAppData()
-  const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
+  const cart = useCartState(
+    record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })),
+    record.manualDiscount ?? null,
+    record.comment ?? '',
+  )
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
   const [receiver, setReceiver] = useState(record.receiver ?? '')
   const cartSectionRef = useRef<HTMLDivElement>(null)
@@ -31,6 +36,8 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
       eventName,
       paymentMethodId,
       receiver: receiver.trim(),
+      manualDiscount: cart.manualDiscount ?? undefined,
+      comment: cart.comment.trim() || undefined,
     })
     onDone()
   }
@@ -71,6 +78,12 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
             onRemove={cart.removeItem}
           />
         </div>
+        <ManualAdjustments
+          manualDiscount={cart.manualDiscount}
+          comment={cart.comment}
+          onManualDiscountChange={cart.setManualDiscount}
+          onCommentChange={cart.setComment}
+        />
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}

@@ -50,6 +50,7 @@ export function DiscountRuleForm({
   const [name, setName] = useState(initial?.name ?? '')
   const [kind, setKind] = useState<Kind>(initial?.kind ?? 'stepDiscount')
   const [enabled, setEnabled] = useState(initial?.enabled ?? true)
+  const [stackable, setStackable] = useState(initial?.stackable ?? true)
   const [error, setError] = useState('')
 
   const [target, setTarget] = useState<ItemSelector>(
@@ -162,6 +163,7 @@ export function DiscountRuleForm({
         kind: 'stepDiscount',
         name: trimmedName,
         enabled,
+        stackable,
         trigger,
         target,
         startFromNth: startNum,
@@ -193,6 +195,7 @@ export function DiscountRuleForm({
         kind: 'bundlePrice',
         name: trimmedName,
         enabled,
+        stackable,
         trigger,
         target,
         bundleSize: sizeNum,
@@ -229,6 +232,7 @@ export function DiscountRuleForm({
       kind: 'comboBundle',
       name: trimmedName,
       enabled,
+      stackable,
       trigger,
       components: parsedComponents,
       bundlePrice: priceNum,
@@ -457,6 +461,22 @@ export function DiscountRuleForm({
         />
         המבצע פעיל
       </label>
+
+      <div className="rounded border border-line bg-subtle p-2">
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={stackable}
+            onChange={(e) => setStackable(e.target.checked)}
+          />
+          ניתן לשלב עם מבצעים אחרים
+        </label>
+        <p className="mt-1 text-xs text-muted">
+          {stackable
+            ? 'פריטים שקיבלו את ההנחה הזו יכולים לקבל גם הנחה ממבצע אחר.'
+            : 'בלעדי: פריטים שקיבלו את ההנחה הזו לא יקבלו הנחה נוספת ממבצע אחר, ולא ייכללו במבצע בלעדי אחר. אם כמה מבצעים בלעדיים מתאימים לאותם פריטים, המערכת תבחר אוטומטית את השילוב המשתלם ביותר ללקוח.'}
+        </p>
+      </div>
 
       {error && <p className="text-sm text-danger-600">{error}</p>}
 

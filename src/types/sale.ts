@@ -3,6 +3,11 @@ export interface CartLine {
   qty: number
 }
 
+export interface ManualDiscount {
+  kind: 'flat' | 'percent'
+  amount: number
+}
+
 export interface LineCreatorShare {
   creatorId: string
   creatorName: string
@@ -37,6 +42,8 @@ export interface SaleRecord {
   receiver?: string
   lines: SaleLineItem[]
   discounts: AppliedDiscount[]
+  manualDiscount?: ManualDiscount
+  comment?: string
   subtotal: number
   totalDiscount: number
   total: number

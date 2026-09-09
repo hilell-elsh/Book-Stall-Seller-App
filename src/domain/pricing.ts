@@ -1,9 +1,9 @@
 import type { Category, CatalogItem } from '../types/catalog'
 import type { Creator } from '../types/creator'
-import type { DiscountRule } from '../types/discount'
+import type { BundlePriceRule, ComboBundleRule, DiscountRule, StepDiscountRule } from '../types/discount'
 import type { Label } from '../types/label'
 import type { ItemSelector } from '../types/selector'
-import type { AppliedDiscount, CartLine, SaleLineItem } from '../types/sale'
+import type { AppliedDiscount, CartLine, ManualDiscount, SaleLineItem } from '../types/sale'
 
 export interface EvaluatedSale {
   lines: SaleLineItem[]
@@ -20,6 +20,14 @@ interface Unit {
   creatorIds: string[]
   unitPriceAgorot: number
   discountAgorot: number
+  // Set once an exclusive (non-stackable) rule claims this unit; from then on
+  // no other rule — exclusive or stackable — may touch it.
+  locked: boolean
+}
+
+interface Assignment {
+  unit: Unit
+  amount: number
 }
 
 interface NameMaps {
@@ -40,11 +48,11 @@ export function fromAgorot(agorot: number): number {
 // Splits `totalAgorot` of discount across `units` proportionally to each unit's
 // price, clamped so a unit already carrying discount from an earlier rule never
 // goes below zero. The remainder goes to the last unit so the split sums exactly.
-function distributeDiscount(units: Unit[], totalAgorot: number): void {
-  if (totalAgorot <= 0 || units.length === 0) return
+function distributeAssignments(units: Unit[], totalAgorot: number): Assignment[] {
+  if (totalAgorot <= 0 || units.length === 0) return []
   const priceSum = units.reduce((sum, unit) => sum + unit.unitPriceAgorot, 0)
   let allocated = 0
-  units.forEach((unit, index) => {
+  return units.map((unit, index) => {
     const isLast = index === units.length - 1
     const share = isLast
       ? totalAgorot - allocated
@@ -52,9 +60,87 @@ function distributeDiscount(units: Unit[], totalAgorot: number): void {
         ? Math.round((totalAgorot * unit.unitPriceAgorot) / priceSum)
         : 0
     const applied = Math.max(0, Math.min(share, unit.unitPriceAgorot - unit.discountAgorot))
-    unit.discountAgorot += applied
     allocated += applied
+    return { unit, amount: applied }
   })
+}
+
+// Pure (non-mutating) computation of what each of the three rule kinds would
+// assign to units in `pool`, used to evaluate exclusive rules against a
+// candidate pool without committing anything until a winner is picked — see
+// the exclusive-rule resolution loop in evaluateSale.
+function computeStepDiscountAssignments(rule: StepDiscountRule, pool: Unit[]): Assignment[] {
+  const targetUnits = pool
+    .filter((unit) => matchesSelector(unit, rule.target))
+    .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
+  if (targetUnits.length < rule.startFromNth) return []
+  const qualifying = targetUnits.slice(rule.startFromNth - 1)
+  return qualifying
+    .map((unit) => {
+      const perUnit =
+        rule.discount.kind === 'flat'
+          ? toAgorot(rule.discount.amount)
+          : Math.round((unit.unitPriceAgorot * rule.discount.percent) / 100)
+      return { unit, amount: Math.min(perUnit, unit.unitPriceAgorot - unit.discountAgorot) }
+    })
+    .filter((assignment) => assignment.amount > 0)
+}
+
+function computeBundlePriceAssignments(rule: BundlePriceRule, pool: Unit[]): Assignment[] {
+  const targetUnits = pool
+    .filter((unit) => matchesSelector(unit, rule.target))
+    .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
+  const numBundles = Math.floor(targetUnits.length / rule.bundleSize)
+  if (numBundles === 0) return []
+  const qualifying = targetUnits.slice(0, numBundles * rule.bundleSize)
+  const qualifyingTotal = qualifying.reduce((sum, unit) => sum + unit.unitPriceAgorot, 0)
+  const totalDiscount = Math.max(0, qualifyingTotal - toAgorot(rule.bundlePrice) * numBundles)
+  return distributeAssignments(qualifying, totalDiscount)
+}
+
+function computeComboBundleAssignments(rule: ComboBundleRule, pool: Unit[]): Assignment[] {
+  if (rule.components.length === 0) return []
+  const rawCounts = rule.components.map(
+    (component) => pool.filter((unit) => matchesSelector(unit, component.target)).length,
+  )
+  const numCombos = Math.min(
+    ...rule.components.map((component, i) => Math.floor(rawCounts[i] / component.qty)),
+  )
+  if (numCombos <= 0) return []
+
+  const usedIndices = new Set<number>()
+  const consumedUnits: Unit[] = []
+  let qualifyingTotal = 0
+
+  for (const component of rule.components) {
+    const candidates = pool
+      .map((unit, index) => ({ unit, index }))
+      .filter(({ unit, index }) => !usedIndices.has(index) && matchesSelector(unit, component.target))
+      .sort((a, b) => b.unit.unitPriceAgorot - a.unit.unitPriceAgorot)
+      .slice(0, numCombos * component.qty)
+
+    for (const { unit, index } of candidates) {
+      usedIndices.add(index)
+      consumedUnits.push(unit)
+      qualifyingTotal += unit.unitPriceAgorot
+    }
+  }
+
+  const totalDiscount = Math.max(0, qualifyingTotal - toAgorot(rule.bundlePrice) * numCombos)
+  return distributeAssignments(consumedUnits, totalDiscount)
+}
+
+function computeRuleAssignments(rule: DiscountRule, pool: Unit[]): Assignment[] {
+  switch (rule.kind) {
+    case 'stepDiscount':
+      return computeStepDiscountAssignments(rule, pool)
+    case 'bundlePrice':
+      return computeBundlePriceAssignments(rule, pool)
+    case 'comboBundle':
+      return computeComboBundleAssignments(rule, pool)
+    default:
+      return assertNever(rule)
+  }
 }
 
 function assertNever(value: never): never {
@@ -133,6 +219,7 @@ export function evaluateSale(
   labels: Label[],
   creators: Creator[],
   rules: DiscountRule[],
+  manualDiscount?: ManualDiscount,
 ): EvaluatedSale {
   const itemById = new Map(items.map((item) => [item.id, item]))
   const categoryById = new Map(categories.map((category) => [category.id, category]))
@@ -174,6 +261,7 @@ export function evaluateSale(
         creatorIds: item.creatorShares.map((share) => share.creatorId),
         unitPriceAgorot,
         discountAgorot: 0,
+        locked: false,
       })
     }
   }
@@ -181,98 +269,61 @@ export function evaluateSale(
   const subtotalAgorot = units.reduce((sum, unit) => sum + unit.unitPriceAgorot, 0)
   const discounts: AppliedDiscount[] = []
 
-  for (const rule of rules) {
-    if (!rule.enabled) continue
-
+  const activeRules = rules.filter((rule) => {
+    if (!rule.enabled) return false
     if (rule.trigger) {
-      const triggerQty = units.filter((unit) =>
-        matchesSelector(unit, rule.trigger!.selector),
-      ).length
-      if (triggerQty < (rule.trigger.minQty ?? 1)) continue
+      const triggerQty = units.filter((unit) => matchesSelector(unit, rule.trigger!.selector)).length
+      return triggerQty >= (rule.trigger.minQty ?? 1)
+    }
+    return true
+  })
+
+  const exclusiveRules = activeRules.filter((rule) => !rule.stackable)
+  const stackableRules = activeRules.filter((rule) => rule.stackable)
+
+  // Exclusive rules may only touch units no other discount has touched yet
+  // (discountAgorot === 0 && !locked). When several exclusive rules could
+  // each claim the same untouched units, award them round by round to
+  // whichever remaining rule currently saves the customer the most — a
+  // greedy pick that gets the customer a lower price than blindly following
+  // the rules' configured order, without a full combinatorial search.
+  let remainingExclusive = exclusiveRules
+  while (remainingExclusive.length > 0) {
+    const pool = units.filter((unit) => !unit.locked && unit.discountAgorot === 0)
+    let best: { rule: DiscountRule; assignments: Assignment[]; total: number } | null = null
+
+    for (const rule of remainingExclusive) {
+      const assignments = computeRuleAssignments(rule, pool)
+      const total = assignments.reduce((sum, assignment) => sum + assignment.amount, 0)
+      if (total > 0 && (!best || total > best.total)) {
+        best = { rule, assignments, total }
+      }
     }
 
-    let discountAgorot = 0
+    if (!best) break
 
-    switch (rule.kind) {
-      case 'stepDiscount': {
-        const targetUnits = units
-          .filter((unit) => matchesSelector(unit, rule.target))
-          .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
-        if (targetUnits.length >= rule.startFromNth) {
-          const qualifying = targetUnits.slice(rule.startFromNth - 1)
-          for (const unit of qualifying) {
-            const perUnit =
-              rule.discount.kind === 'flat'
-                ? toAgorot(rule.discount.amount)
-                : Math.round((unit.unitPriceAgorot * rule.discount.percent) / 100)
-            const applied = Math.min(perUnit, unit.unitPriceAgorot - unit.discountAgorot)
-            unit.discountAgorot += applied
-            discountAgorot += applied
-          }
-        }
-        break
-      }
-      case 'bundlePrice': {
-        const targetUnits = units
-          .filter((unit) => matchesSelector(unit, rule.target))
-          .sort((a, b) => b.unitPriceAgorot - a.unitPriceAgorot)
-        const numBundles = Math.floor(targetUnits.length / rule.bundleSize)
-        if (numBundles > 0) {
-          const qualifying = targetUnits.slice(0, numBundles * rule.bundleSize)
-          const qualifyingTotal = qualifying.reduce(
-            (sum, unit) => sum + unit.unitPriceAgorot,
-            0,
-          )
-          discountAgorot = Math.max(
-            0,
-            qualifyingTotal - toAgorot(rule.bundlePrice) * numBundles,
-          )
-          distributeDiscount(qualifying, discountAgorot)
-        }
-        break
-      }
-      case 'comboBundle': {
-        // Components are expected to target non-overlapping sets of units for
-        // predictable results; a unit matching two components' selectors is
-        // only ever consumed by whichever component claims it first below.
-        if (rule.components.length > 0) {
-          const rawCounts = rule.components.map(
-            (component) => units.filter((unit) => matchesSelector(unit, component.target)).length,
-          )
-          const numCombos = Math.min(
-            ...rule.components.map((component, i) => Math.floor(rawCounts[i] / component.qty)),
-          )
+    for (const { unit, amount } of best.assignments) {
+      unit.discountAgorot += amount
+      unit.locked = true
+    }
+    discounts.push({
+      ruleId: best.rule.id,
+      ruleName: best.rule.name,
+      amount: fromAgorot(best.total),
+      description: describeDiscount(best.rule, maps),
+    })
+    remainingExclusive = remainingExclusive.filter((rule) => rule.id !== best.rule.id)
+  }
 
-          if (numCombos > 0) {
-            const usedIndices = new Set<number>()
-            const consumedUnits: Unit[] = []
-            let qualifyingTotal = 0
+  // Stackable rules apply in the seller's configured order, same as before,
+  // just skipping units an exclusive rule has already locked.
+  for (const rule of stackableRules) {
+    const available = units.filter((unit) => !unit.locked)
+    const assignments = computeRuleAssignments(rule, available)
+    const discountAgorot = assignments.reduce((sum, assignment) => sum + assignment.amount, 0)
 
-            for (const component of rule.components) {
-              const pool = units
-                .map((unit, index) => ({ unit, index }))
-                .filter(({ unit, index }) => !usedIndices.has(index) && matchesSelector(unit, component.target))
-                .sort((a, b) => b.unit.unitPriceAgorot - a.unit.unitPriceAgorot)
-                .slice(0, numCombos * component.qty)
-
-              for (const { unit, index } of pool) {
-                usedIndices.add(index)
-                consumedUnits.push(unit)
-                qualifyingTotal += unit.unitPriceAgorot
-              }
-            }
-
-            discountAgorot = Math.max(
-              0,
-              qualifyingTotal - toAgorot(rule.bundlePrice) * numCombos,
-            )
-            distributeDiscount(consumedUnits, discountAgorot)
-          }
-        }
-        break
-      }
-      default:
-        assertNever(rule)
+    for (const { unit, amount } of assignments) {
+      unit.discountAgorot += amount
     }
 
     if (discountAgorot > 0) {
@@ -281,6 +332,29 @@ export function evaluateSale(
         ruleName: rule.name,
         amount: fromAgorot(discountAgorot),
         description: describeDiscount(rule, maps),
+      })
+    }
+  }
+
+  const ruleDiscountAgorot = discounts.reduce((sum, discount) => sum + toAgorot(discount.amount), 0)
+
+  // Manual discount is a cashier-entered, whole-sale adjustment applied on
+  // top of whatever the rules already worked out; it isn't attributed to a
+  // specific line (see line-discount computation below, which only reflects
+  // `units`) or split with creators.
+  const preManualTotalAgorot = Math.max(0, subtotalAgorot - ruleDiscountAgorot)
+  if (manualDiscount) {
+    const rawAgorot =
+      manualDiscount.kind === 'flat'
+        ? toAgorot(manualDiscount.amount)
+        : Math.round((preManualTotalAgorot * manualDiscount.amount) / 100)
+    const manualAgorot = Math.max(0, Math.min(rawAgorot, preManualTotalAgorot))
+    if (manualAgorot > 0) {
+      discounts.push({
+        ruleId: 'manual',
+        ruleName: 'הנחה ידנית',
+        amount: fromAgorot(manualAgorot),
+        description: 'הנחה ידנית',
       })
     }
   }

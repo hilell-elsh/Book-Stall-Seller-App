@@ -86,6 +86,7 @@ export function buildSalesCsvRows(
       record.total.toFixed(2),
       paymentMethodName,
       record.receiver ?? '',
+      record.comment ?? '',
       ...itemCells,
       ...creatorCells,
     ])
@@ -98,6 +99,7 @@ export function buildSalesCsvRows(
     'סה"כ',
     'אמצעי תשלום',
     'מקבל/ת',
+    'הערה',
     ...itemColumns.map((item) => `${item.name} (${item.unitPrice.toFixed(2)})`),
     ...creatorColumns,
   ]
@@ -107,6 +109,7 @@ export function buildSalesCsvRows(
     fromAgorot(subtotalAgorot).toFixed(2),
     fromAgorot(discountAgorot).toFixed(2),
     fromAgorot(totalAgorot).toFixed(2),
+    '',
     '',
     '',
     ...itemQtyTotals.map((qty) => String(qty)),

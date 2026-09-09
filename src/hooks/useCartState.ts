@@ -1,20 +1,30 @@
 import { useMemo, useState } from 'react'
 import { useAppData } from '../context/AppDataContext'
 import { evaluateSale, type EvaluatedSale } from '../domain/pricing'
-import type { CartLine } from '../types/sale'
+import type { CartLine, ManualDiscount } from '../types/sale'
 
 export interface CartState {
   lines: CartLine[]
   evaluated: EvaluatedSale
+  manualDiscount: ManualDiscount | null
+  comment: string
   addItem: (itemId: string) => void
   setQty: (itemId: string, qty: number) => void
   removeItem: (itemId: string) => void
   clear: () => void
+  setManualDiscount: (discount: ManualDiscount | null) => void
+  setComment: (comment: string) => void
 }
 
-export function useCartState(initialLines: CartLine[] = []): CartState {
+export function useCartState(
+  initialLines: CartLine[] = [],
+  initialManualDiscount: ManualDiscount | null = null,
+  initialComment: string = '',
+): CartState {
   const { categories, items, labels, creators, discountRules } = useAppData()
   const [lines, setLines] = useState<CartLine[]>(initialLines)
+  const [manualDiscount, setManualDiscount] = useState<ManualDiscount | null>(initialManualDiscount)
+  const [comment, setComment] = useState(initialComment)
 
   function addItem(itemId: string) {
     setLines((prev) => {
@@ -42,12 +52,34 @@ export function useCartState(initialLines: CartLine[] = []): CartState {
 
   function clear() {
     setLines([])
+    setManualDiscount(null)
+    setComment('')
   }
 
   const evaluated = useMemo(
-    () => evaluateSale(lines, categories, items, labels, creators, discountRules),
-    [lines, categories, items, labels, creators, discountRules],
+    () =>
+      evaluateSale(
+        lines,
+        categories,
+        items,
+        labels,
+        creators,
+        discountRules,
+        manualDiscount ?? undefined,
+      ),
+    [lines, categories, items, labels, creators, discountRules, manualDiscount],
   )
 
-  return { lines, evaluated, addItem, setQty, removeItem, clear }
+  return {
+    lines,
+    evaluated,
+    manualDiscount,
+    comment,
+    addItem,
+    setQty,
+    removeItem,
+    clear,
+    setManualDiscount,
+    setComment,
+  }
 }

@@ -69,6 +69,9 @@ function normalizeDiscountRule(raw: DiscountRule): DiscountRule {
   if (rule.kind === 'stepDiscount' || rule.kind === 'bundlePrice') {
     rule.target = normalizeSelector(rule.target)
   }
+  // stackable was added after some rules may have already been saved; default
+  // to true so existing rules keep behaving exactly as they did before.
+  rule.stackable = rule.stackable ?? true
   return rule
 }
 

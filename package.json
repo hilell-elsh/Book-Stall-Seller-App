@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:offline": "tsc -b && vite build --config vite.config.offline.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -22,6 +23,7 @@
     "oxlint": "^1.79.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

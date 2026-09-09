@@ -1,7 +1,7 @@
 import { Money } from '../../components/Money'
 import { useAppData } from '../../context/AppDataContext'
 import type { SaleRecord } from '../../types/sale'
-import { RecordEditor } from './RecordEditor'
+import { RecordPanel } from './RecordPanel'
 
 interface RecordListProps {
   records: SaleRecord[]
@@ -51,7 +51,7 @@ export function RecordList({ records, expandedId, onToggle, onCloseExpanded }: R
             </button>
             {isExpanded && (
               <div className="border-t border-line">
-                <RecordEditor record={record} onClose={onCloseExpanded} />
+                <RecordPanel record={record} onClose={onCloseExpanded} />
               </div>
             )}
           </li>

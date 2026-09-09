@@ -3,6 +3,7 @@ import type { DiscountRule } from '../types/discount'
 import type { Label } from '../types/label'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
+import type { ItemSelector } from '../types/selector'
 import { readJSON, writeJSON } from './localStorageDriver'
 
 const CATEGORIES_KEY = 'categories'
@@ -32,8 +33,32 @@ export function saveItems(items: CatalogItem[]): void {
   writeJSON(ITEMS_KEY, items)
 }
 
+// The old category/label selector shapes were merged into one 'filter' shape;
+// normalize any rules saved before that change so they don't crash on load.
+function normalizeSelector(raw: unknown): ItemSelector {
+  const selector = raw as { type?: string; categoryIds?: string[]; labelIds?: string[] } | undefined
+  if (selector?.type === 'category') {
+    return { type: 'filter', categoryIds: selector.categoryIds ?? [], labelIds: [] }
+  }
+  if (selector?.type === 'label') {
+    return { type: 'filter', categoryIds: [], labelIds: selector.labelIds ?? [] }
+  }
+  return selector as ItemSelector
+}
+
+function normalizeDiscountRule(raw: DiscountRule): DiscountRule {
+  const rule = { ...raw } as DiscountRule & { target?: ItemSelector }
+  if (rule.trigger) {
+    rule.trigger = { ...rule.trigger, selector: normalizeSelector(rule.trigger.selector) }
+  }
+  if (rule.kind === 'stepDiscount' || rule.kind === 'bundlePrice') {
+    rule.target = normalizeSelector(rule.target)
+  }
+  return rule
+}
+
 export function getDiscountRules(): DiscountRule[] {
-  return readJSON<DiscountRule[]>(DISCOUNT_RULES_KEY, [])
+  return readJSON<DiscountRule[]>(DISCOUNT_RULES_KEY, []).map(normalizeDiscountRule)
 }
 
 export function saveDiscountRules(rules: DiscountRule[]): void {

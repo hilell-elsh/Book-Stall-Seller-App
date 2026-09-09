@@ -1,4 +1,3 @@
 export type ItemSelector =
-  | { type: 'category'; categoryIds: string[] }
-  | { type: 'label'; labelIds: string[] }
+  | { type: 'filter'; categoryIds: string[]; labelIds: string[] }
   | { type: 'item'; itemIds: string[] }

@@ -33,8 +33,20 @@ export interface BundlePriceRule extends DiscountRuleBase {
   bundlePrice: number
 }
 
-export type DiscountRule = StepDiscountRule | BundlePriceRule
+export interface ComboComponent {
+  target: ItemSelector
+  qty: number
+}
+
+export interface ComboBundleRule extends DiscountRuleBase {
+  kind: 'comboBundle'
+  components: ComboComponent[]
+  bundlePrice: number
+}
+
+export type DiscountRule = StepDiscountRule | BundlePriceRule | ComboBundleRule
 
 export type DiscountRuleDraft =
   | Omit<StepDiscountRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>
   | Omit<BundlePriceRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>
+  | Omit<ComboBundleRule, 'id' | 'order' | 'createdAt' | 'updatedAt'>

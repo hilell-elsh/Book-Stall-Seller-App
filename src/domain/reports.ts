@@ -1,5 +1,5 @@
 import { fromAgorot, toAgorot } from './pricing'
-import { computeCreatorPayouts, splitLineCreatorShares } from './payouts'
+import { computeCreatorPayouts } from './payouts'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
 
@@ -29,12 +29,10 @@ export function buildSalesCsvRows(
   const rows: string[][] = [
     [
       'תאריך',
-      'שם פריט',
-      'קטגוריה',
-      'כמות',
-      'מחיר יחידה',
-      'סכום שורה',
-      'הנחת שורה',
+      'פריטים',
+      'סכום ביניים',
+      'הנחה',
+      'סה"כ',
       'אמצעי תשלום',
       'מקבל/ת',
       'יוצרים',
@@ -44,23 +42,22 @@ export function buildSalesCsvRows(
     const paymentMethodName = record.paymentMethodId
       ? (paymentMethodById.get(record.paymentMethodId)?.name ?? '')
       : ''
-    for (const line of record.lines) {
-      const creatorShares = splitLineCreatorShares(line)
-        .map((share) => `${share.creatorName} ${share.percentage}% (${share.amount.toFixed(2)})`)
-        .join('; ')
-      rows.push([
-        dateFormatter.format(new Date(record.createdAt)),
-        line.itemName,
-        line.categoryName,
-        String(line.qty),
-        line.unitPrice.toFixed(2),
-        line.lineSubtotal.toFixed(2),
-        line.lineDiscount.toFixed(2),
-        paymentMethodName,
-        record.receiver ?? '',
-        creatorShares,
-      ])
-    }
+    const items = record.lines
+      .map((line) => `${line.itemName} x${line.qty} (${line.lineSubtotal.toFixed(2)})`)
+      .join('; ')
+    const creatorShares = computeCreatorPayouts(record)
+      .map((payout) => `${payout.creatorName} (${payout.amount.toFixed(2)})`)
+      .join('; ')
+    rows.push([
+      dateFormatter.format(new Date(record.createdAt)),
+      items,
+      record.subtotal.toFixed(2),
+      record.totalDiscount.toFixed(2),
+      record.total.toFixed(2),
+      paymentMethodName,
+      record.receiver ?? '',
+      creatorShares,
+    ])
   }
   return rows
 }

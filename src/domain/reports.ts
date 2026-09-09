@@ -28,7 +28,8 @@ export function buildSalesCsvRows(
   const paymentMethodById = new Map(paymentMethods.map((method) => [method.id, method]))
 
   // One column per item/creator that actually appears, in order of first appearance.
-  const itemColumns: string[] = []
+  // Kept after the fixed columns so a long item list doesn't push totals/payment out of view.
+  const itemColumns: { name: string; unitPrice: number }[] = []
   const itemColumnIndex = new Map<string, number>()
   const creatorColumns: string[] = []
   const creatorColumnIndex = new Map<string, number>()
@@ -37,7 +38,7 @@ export function buildSalesCsvRows(
     for (const line of record.lines) {
       if (!itemColumnIndex.has(line.itemId)) {
         itemColumnIndex.set(line.itemId, itemColumns.length)
-        itemColumns.push(line.itemName)
+        itemColumns.push({ name: line.itemName, unitPrice: line.unitPrice })
       }
     }
     for (const payout of computeCreatorPayouts(record)) {
@@ -48,7 +49,7 @@ export function buildSalesCsvRows(
     }
   }
 
-  const itemTotalsAgorot = new Array(itemColumns.length).fill(0)
+  const itemQtyTotals = new Array(itemColumns.length).fill(0)
   const creatorTotalsAgorot = new Array(creatorColumns.length).fill(0)
   let subtotalAgorot = 0
   let discountAgorot = 0
@@ -62,10 +63,9 @@ export function buildSalesCsvRows(
 
     const itemCells = new Array(itemColumns.length).fill('')
     for (const line of record.lines) {
-      const amountAgorot = toAgorot(line.lineSubtotal) - toAgorot(line.lineDiscount)
       const index = itemColumnIndex.get(line.itemId)!
-      itemCells[index] = fromAgorot(amountAgorot).toFixed(2)
-      itemTotalsAgorot[index] += amountAgorot
+      itemCells[index] = String(line.qty)
+      itemQtyTotals[index] += line.qty
     }
 
     const creatorCells = new Array(creatorColumns.length).fill('')
@@ -81,35 +81,35 @@ export function buildSalesCsvRows(
 
     dataRows.push([
       dateFormatter.format(new Date(record.createdAt)),
-      ...itemCells,
       record.subtotal.toFixed(2),
       record.totalDiscount.toFixed(2),
       record.total.toFixed(2),
       paymentMethodName,
       record.receiver ?? '',
+      ...itemCells,
       ...creatorCells,
     ])
   }
 
   const header = [
     'תאריך',
-    ...itemColumns,
     'סכום ביניים',
     'הנחה',
     'סה"כ',
     'אמצעי תשלום',
     'מקבל/ת',
+    ...itemColumns.map((item) => `${item.name} (${item.unitPrice.toFixed(2)})`),
     ...creatorColumns,
   ]
 
   const totalRow = [
     'סה"כ',
-    ...itemTotalsAgorot.map((agorot) => fromAgorot(agorot).toFixed(2)),
     fromAgorot(subtotalAgorot).toFixed(2),
     fromAgorot(discountAgorot).toFixed(2),
     fromAgorot(totalAgorot).toFixed(2),
     '',
     '',
+    ...itemQtyTotals.map((qty) => String(qty)),
     ...creatorTotalsAgorot.map((agorot) => fromAgorot(agorot).toFixed(2)),
   ]
 

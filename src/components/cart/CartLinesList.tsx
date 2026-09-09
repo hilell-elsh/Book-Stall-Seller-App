@@ -25,7 +25,7 @@ export function CartLinesList({ lines, onSetQty, onRemove }: CartLinesListProps)
           <button
             type="button"
             onClick={() => onSetQty(line.itemId, line.qty - 1)}
-            className="h-11 w-11 shrink-0 rounded border border-line-strong text-lg"
+            className="h-11 w-11 shrink-0 rounded border border-line-strong text-lg transition-colors hover:bg-subtle"
             aria-label="הפחת כמות"
           >
             −
@@ -34,7 +34,7 @@ export function CartLinesList({ lines, onSetQty, onRemove }: CartLinesListProps)
           <button
             type="button"
             onClick={() => onSetQty(line.itemId, line.qty + 1)}
-            className="h-11 w-11 shrink-0 rounded border border-line-strong text-lg"
+            className="h-11 w-11 shrink-0 rounded border border-line-strong text-lg transition-colors hover:bg-subtle"
             aria-label="הוסף כמות"
           >
             +
@@ -45,7 +45,7 @@ export function CartLinesList({ lines, onSetQty, onRemove }: CartLinesListProps)
           <button
             type="button"
             onClick={() => onRemove(line.itemId)}
-            className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
+            className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
             aria-label="הסר"
           >
             ✕

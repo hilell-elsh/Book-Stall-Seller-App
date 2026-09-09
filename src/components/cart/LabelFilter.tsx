@@ -21,7 +21,7 @@ export function LabelFilter({ labels, activeLabelIds, onToggle }: LabelFilterPro
             className={`flex min-h-9 items-center justify-center rounded-full border px-3 text-xs font-medium ${
               active
                 ? 'border-accent-600 bg-accent-600 text-white'
-                : 'border-line-strong text-muted'
+                : 'border-line-strong text-muted transition-colors hover:bg-subtle'
             }`}
           >
             {label.name}

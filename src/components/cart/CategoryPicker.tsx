@@ -15,7 +15,7 @@ export function CategoryPicker({ categories, activeCategoryId, onSelect }: Categ
         className={`flex min-h-11 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-medium ${
           activeCategoryId === ''
             ? 'border-accent-600 bg-accent-600 text-white'
-            : 'border-line-strong text-ink'
+            : 'border-line-strong text-ink transition-colors hover:bg-subtle'
         }`}
       >
         הכל
@@ -28,7 +28,7 @@ export function CategoryPicker({ categories, activeCategoryId, onSelect }: Categ
           className={`flex min-h-11 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-medium ${
             category.id === activeCategoryId
               ? 'border-accent-600 bg-accent-600 text-white'
-              : 'border-line-strong text-ink'
+              : 'border-line-strong text-ink transition-colors hover:bg-subtle'
           }`}
         >
           {category.name}

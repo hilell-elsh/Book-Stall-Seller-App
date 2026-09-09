@@ -19,10 +19,10 @@ export function NavTabs({ active, onChange }: NavTabsProps) {
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
-          className={`flex-1 py-3 text-base font-medium ${
+          className={`flex-1 border-b-2 py-3 text-base font-medium transition-colors ${
             active === tab.id
-              ? 'border-b-2 border-accent-600 text-accent-600'
-              : 'text-muted'
+              ? 'border-accent-600 text-accent-600'
+              : 'border-transparent text-muted hover:bg-subtle'
           }`}
         >
           {tab.label}

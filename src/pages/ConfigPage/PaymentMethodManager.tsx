@@ -37,7 +37,7 @@ export function PaymentMethodManager() {
             <button
               type="button"
               onClick={() => setPendingDelete(method)}
-              className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
+              className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
               aria-label="מחק"
             >
               ✕

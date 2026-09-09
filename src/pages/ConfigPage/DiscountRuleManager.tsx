@@ -66,7 +66,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'up')}
                   disabled={index === 0}
-                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
                   aria-label="הזז למעלה"
                 >
                   ↑
@@ -75,7 +75,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'down')}
                   disabled={index === discountRules.length - 1}
-                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
                   aria-label="הזז למטה"
                 >
                   ↓
@@ -83,14 +83,14 @@ export function DiscountRuleManager() {
                 <button
                   type="button"
                   onClick={() => setEditing(rule)}
-                  className="h-9 shrink-0 rounded border border-line-strong px-3 text-sm"
+                  className="h-11 shrink-0 rounded border border-line-strong px-3 text-sm transition-colors hover:bg-subtle"
                 >
                   עריכה
                 </button>
                 <button
                   type="button"
                   onClick={() => setPendingDelete(rule)}
-                  className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
+                  className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
                   aria-label="מחק"
                 >
                   ✕

@@ -18,7 +18,7 @@ export function ItemGrid({ items, onAdd }: ItemGridProps) {
           key={item.id}
           type="button"
           onClick={() => onAdd(item.id)}
-          className="flex min-h-[44px] flex-col items-center justify-center rounded-lg border border-line-strong bg-surface p-3 text-center active:bg-subtle"
+          className="flex min-h-[44px] flex-col items-center justify-center rounded-lg border border-line-strong bg-surface p-3 text-center transition-colors hover:bg-subtle active:bg-subtle"
         >
           <span className="text-sm font-medium">{item.name}</span>
           <span className="mt-1 text-xs text-muted">

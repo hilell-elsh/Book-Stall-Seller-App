@@ -41,14 +41,14 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-11 items-center text-sm text-accent-600"
+            className="flex min-h-11 items-center rounded px-2 text-sm text-accent-600 transition-colors hover:bg-subtle"
           >
             → חזרה לרשימה
           </button>
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
-            className="flex min-h-11 items-center rounded border border-danger-300 px-3 text-sm text-danger-600"
+            className="flex min-h-11 items-center rounded border border-danger-300 px-3 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
           >
             מחיקת מכירה
           </button>

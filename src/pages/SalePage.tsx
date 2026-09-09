@@ -29,7 +29,7 @@ export function SalePage({ cart }: SalePageProps) {
     return (
       <div className="p-4">
         <h1 className="text-lg font-semibold">מכירה</h1>
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-faint">
           יש להוסיף קודם קטגוריות ופריטים במסך ההגדרות.
         </p>
       </div>
@@ -42,7 +42,7 @@ export function SalePage({ cart }: SalePageProps) {
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
       </div>
 
-      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-gray-200">
+      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line">
         <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
           <CartLinesList
             lines={cart.evaluated.lines}

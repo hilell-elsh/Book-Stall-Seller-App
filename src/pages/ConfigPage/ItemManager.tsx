@@ -37,7 +37,7 @@ export function ItemManager() {
     return (
       <section>
         <h2 className="text-base font-semibold">פריטים</h2>
-        <p className="mt-2 text-sm text-gray-400">
+        <p className="mt-2 text-sm text-faint">
           יש להוסיף קודם קטגוריה אחת לפחות.
         </p>
       </section>
@@ -52,8 +52,8 @@ export function ItemManager() {
         const categoryItems = items.filter((item) => item.categoryId === category.id)
         return (
           <div key={category.id} className="mt-3">
-            <h3 className="text-sm font-medium text-gray-600">{category.name}</h3>
-            <ul className="mt-1 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+            <h3 className="text-sm font-medium text-muted">{category.name}</h3>
+            <ul className="mt-1 divide-y divide-line rounded-lg border border-line bg-surface">
               {categoryItems.map((item, index) => (
                 <li key={item.id} className="p-2">
                   <div className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function ItemManager() {
                           updateItem(item.id, { name: trimmed })
                         }
                       }}
-                      className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-2 text-sm"
+                      className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
                     />
                     <input
                       type="number"
@@ -79,12 +79,12 @@ export function ItemManager() {
                           updateItem(item.id, { price })
                         }
                       }}
-                      className="w-20 shrink-0 rounded border border-gray-300 px-2 py-2 text-sm"
+                      className="w-20 shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
                     />
                     <select
                       value={item.categoryId}
                       onChange={(e) => changeItemCategory(item.id, e.target.value)}
-                      className="shrink-0 rounded border border-gray-300 px-2 py-2 text-sm"
+                      className="shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
                     >
                       {categories.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -96,7 +96,7 @@ export function ItemManager() {
                       type="button"
                       onClick={() => moveItem(item.id, 'up')}
                       disabled={index === 0}
-                      className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                      className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
                       aria-label="הזז למעלה"
                     >
                       ↑
@@ -105,7 +105,7 @@ export function ItemManager() {
                       type="button"
                       onClick={() => moveItem(item.id, 'down')}
                       disabled={index === categoryItems.length - 1}
-                      className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                      className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
                       aria-label="הזז למטה"
                     >
                       ↓
@@ -113,7 +113,7 @@ export function ItemManager() {
                     <button
                       type="button"
                       onClick={() => setPendingDelete(item)}
-                      className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
+                      className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
                       aria-label="מחק"
                     >
                       ✕
@@ -130,8 +130,8 @@ export function ItemManager() {
                             onClick={() => toggleItemLabel(item.id, label.id)}
                             className={`rounded-full border px-2 py-0.5 text-xs ${
                               active
-                                ? 'border-blue-600 bg-blue-600 text-white'
-                                : 'border-gray-300 text-gray-500'
+                                ? 'border-accent-600 bg-accent-600 text-white'
+                                : 'border-line-strong text-muted'
                             }`}
                           >
                             {label.name}
@@ -143,7 +143,7 @@ export function ItemManager() {
                 </li>
               ))}
               {categoryItems.length === 0 && (
-                <li className="p-3 text-sm text-gray-400">אין עדיין פריטים בקטגוריה זו.</li>
+                <li className="p-3 text-sm text-faint">אין עדיין פריטים בקטגוריה זו.</li>
               )}
             </ul>
           </div>
@@ -154,7 +154,7 @@ export function ItemManager() {
         <select
           value={activeCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-2 text-sm"
+          className="rounded border border-line-strong px-2 py-2 text-sm"
         >
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -167,7 +167,7 @@ export function ItemManager() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="שם פריט"
-          className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-2 text-sm"
+          className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
         />
         <input
           type="number"
@@ -176,12 +176,12 @@ export function ItemManager() {
           value={newPrice}
           onChange={(e) => setNewPrice(e.target.value)}
           placeholder="מחיר"
-          className="w-20 shrink-0 rounded border border-gray-300 px-2 py-2 text-sm"
+          className="w-20 shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="shrink-0 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          className="shrink-0 rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white"
         >
           הוספה
         </button>

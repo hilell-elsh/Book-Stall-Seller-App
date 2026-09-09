@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --color-paper: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-subtle: #f7f8f9;
+  --color-line: #e1e4e9;
+  --color-line-strong: #c7cbd3;
+  --color-ink: #1a1d23;
+  --color-muted: #5b6270;
+  --color-faint: #9ba1ac;
+  --color-accent-600: #0e7c7b;
+  --color-accent-700: #0a6362;
+  --color-danger-300: #e3ada5;
+  --color-danger-600: #b3392e;
+  --color-success-600: #1f8a5f;
+}
+
 html,
 body,
 #root {
@@ -9,4 +25,9 @@ body,
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-600);
+  outline-offset: 2px;
 }

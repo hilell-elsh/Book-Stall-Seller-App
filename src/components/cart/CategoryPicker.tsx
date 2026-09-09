@@ -14,8 +14,8 @@ export function CategoryPicker({ categories, activeCategoryId, onSelect }: Categ
         onClick={() => onSelect('')}
         className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${
           activeCategoryId === ''
-            ? 'border-blue-600 bg-blue-600 text-white'
-            : 'border-gray-300 text-gray-700'
+            ? 'border-accent-600 bg-accent-600 text-white'
+            : 'border-line-strong text-ink'
         }`}
       >
         הכל
@@ -27,8 +27,8 @@ export function CategoryPicker({ categories, activeCategoryId, onSelect }: Categ
           onClick={() => onSelect(category.id)}
           className={`flex min-h-11 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-medium ${
             category.id === activeCategoryId
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-gray-300 text-gray-700'
+              ? 'border-accent-600 bg-accent-600 text-white'
+              : 'border-line-strong text-ink'
           }`}
         >
           {category.name}

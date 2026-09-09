@@ -13,7 +13,7 @@ interface NavTabsProps {
 
 export function NavTabs({ active, onChange }: NavTabsProps) {
   return (
-    <nav className="sticky top-0 z-10 flex border-b border-gray-200 bg-white">
+    <nav className="sticky top-0 z-10 flex border-b border-line bg-surface">
       {TABS.map((tab) => (
         <button
           key={tab.id}
@@ -21,8 +21,8 @@ export function NavTabs({ active, onChange }: NavTabsProps) {
           onClick={() => onChange(tab.id)}
           className={`flex-1 py-3 text-base font-medium ${
             active === tab.id
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-500'
+              ? 'border-b-2 border-accent-600 text-accent-600'
+              : 'text-muted'
           }`}
         >
           {tab.label}

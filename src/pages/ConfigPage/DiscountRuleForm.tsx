@@ -149,37 +149,37 @@ export function DiscountRuleForm({
   }
 
   return (
-    <div className="mt-2 space-y-3 rounded-lg border border-gray-200 bg-white p-3">
+    <div className="mt-2 space-y-3 rounded-lg border border-line bg-surface p-3">
       <div>
-        <label className="block text-sm text-gray-600">שם המבצע</label>
+        <label className="block text-sm text-muted">שם המבצע</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+          className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
         />
       </div>
 
       <div>
-        <label className="block text-sm text-gray-600">סוג המבצע</label>
+        <label className="block text-sm text-muted">סוג המבצע</label>
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as Kind)}
-          className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+          className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
         >
           <option value="stepDiscount">הנחה מדורגת</option>
           <option value="bundlePrice">מחיר חבילה</option>
         </select>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-muted">
           {kind === 'stepDiscount'
             ? 'הנחה על כל פריט החל ממספר מסוים באותה קבוצה. לדוגמה: "מפריט מס\' 2 ואילך בקטגוריית אוסף — 5₪ הנחה" (הפריט הראשון במחיר מלא, מהשני והלאה בהנחה).'
             : 'מחיר קבוע לכמות פריטים יחד. לדוגמה: "3 פריטים מקטגוריית אוסף ב-25₪" — כל שלשה שלמה מהקבוצה תחויב ב-25₪ בסך הכול במקום המחיר המקורי.'}
         </p>
       </div>
 
-      <div className="space-y-3 rounded border border-gray-100 bg-gray-50 p-2">
+      <div className="space-y-3 rounded border border-line bg-subtle p-2">
         <div>
-          <span className="block text-sm text-gray-600">על מה חלה ההנחה</span>
+          <span className="block text-sm text-muted">על מה חלה ההנחה</span>
           <div className="mt-1">
             <TargetPicker
               categories={categories}
@@ -194,30 +194,30 @@ export function DiscountRuleForm({
         {kind === 'stepDiscount' && (
           <>
             <div>
-              <label className="block text-sm text-gray-600">החל מפריט מספר</label>
+              <label className="block text-sm text-muted">החל מפריט מספר</label>
               <input
                 type="number"
                 min="1"
                 step="1"
                 value={startFromNth}
                 onChange={(e) => setStartFromNth(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
               />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-sm text-gray-600">סוג הנחה</label>
+                <label className="block text-sm text-muted">סוג הנחה</label>
                 <select
                   value={discountKind}
                   onChange={(e) => setDiscountKind(e.target.value as 'flat' | 'percent')}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                  className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
                 >
                   <option value="flat">סכום קבוע (₪)</option>
                   <option value="percent">אחוז (%)</option>
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-sm text-gray-600">
+                <label className="block text-sm text-muted">
                   {discountKind === 'flat' ? 'סכום ההנחה (₪)' : 'אחוז ההנחה (%)'}
                 </label>
                 <input
@@ -226,7 +226,7 @@ export function DiscountRuleForm({
                   step="0.5"
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                  className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
                 />
               </div>
             </div>
@@ -236,33 +236,33 @@ export function DiscountRuleForm({
         {kind === 'bundlePrice' && (
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-sm text-gray-600">גודל חבילה (יחידות)</label>
+              <label className="block text-sm text-muted">גודל חבילה (יחידות)</label>
               <input
                 type="number"
                 min="2"
                 step="1"
                 value={bundleSize}
                 onChange={(e) => setBundleSize(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm text-gray-600">מחיר חבילה (₪)</label>
+              <label className="block text-sm text-muted">מחיר חבילה (₪)</label>
               <input
                 type="number"
                 min="0"
                 step="0.5"
                 value={bundlePrice}
                 onChange={(e) => setBundlePrice(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+                className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
               />
             </div>
           </div>
         )}
       </div>
 
-      <div className="rounded border border-gray-100 bg-gray-50 p-2">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="rounded border border-line bg-subtle p-2">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={triggerEnabled}
@@ -280,21 +280,21 @@ export function DiscountRuleForm({
               onChange={setTriggerSelector}
             />
             <div>
-              <label className="block text-sm text-gray-600">כמות מינימלית להפעלה</label>
+              <label className="block text-sm text-muted">כמות מינימלית להפעלה</label>
               <input
                 type="number"
                 min="1"
                 step="1"
                 value={triggerMinQty}
                 onChange={(e) => setTriggerMinQty(e.target.value)}
-                className="mt-1 w-24 rounded border border-gray-300 px-2 py-2 text-sm"
+                className="mt-1 w-24 rounded border border-line-strong px-2 py-2 text-sm"
               />
             </div>
           </div>
         )}
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-gray-600">
+      <label className="flex items-center gap-2 text-sm text-muted">
         <input
           type="checkbox"
           checked={enabled}
@@ -303,20 +303,20 @@ export function DiscountRuleForm({
         המבצע פעיל
       </label>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger-600">{error}</p>}
 
       <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded px-3 py-2 text-sm text-gray-600"
+          className="rounded px-3 py-2 text-sm text-muted"
         >
           ביטול
         </button>
         <button
           type="button"
           onClick={handleSubmit}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          className="rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white"
         >
           שמירה
         </button>

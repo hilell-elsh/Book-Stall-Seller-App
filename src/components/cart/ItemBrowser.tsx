@@ -52,7 +52,7 @@ export function ItemBrowser({ categories, items, labels, onAdd }: ItemBrowserPro
             if (itemsInCategory.length === 0) return null
             return (
               <div key={category.id}>
-                <h2 className="px-3 text-sm font-medium text-gray-600">{category.name}</h2>
+                <h2 className="px-3 text-sm font-medium text-muted">{category.name}</h2>
                 <div className="mt-1">
                   <ItemGrid items={itemsInCategory} onAdd={onAdd} />
                 </div>

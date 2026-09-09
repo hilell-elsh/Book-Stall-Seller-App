@@ -41,14 +41,14 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-11 items-center text-sm text-blue-600"
+            className="flex min-h-11 items-center text-sm text-accent-600"
           >
             → חזרה לרשימה
           </button>
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
-            className="flex min-h-11 items-center rounded border border-red-300 px-3 text-sm text-red-600"
+            className="flex min-h-11 items-center rounded border border-danger-300 px-3 text-sm text-danger-600"
           >
             מחיקת מכירה
           </button>
@@ -56,7 +56,7 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
       </div>
 
-      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-gray-200">
+      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line">
         <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
           <CartLinesList
             lines={cart.evaluated.lines}

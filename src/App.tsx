@@ -11,7 +11,7 @@ function App() {
   const cart = useCartState()
 
   return (
-    <div className="min-h-full bg-gray-50">
+    <div className="min-h-full bg-paper">
       <NavTabs active={activeTab} onChange={setActiveTab} />
       {activeTab === 'sale' && <SalePage cart={cart} />}
       {activeTab === 'config' && <ConfigPage />}

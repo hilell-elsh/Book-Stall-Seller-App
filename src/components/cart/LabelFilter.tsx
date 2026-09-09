@@ -20,8 +20,8 @@ export function LabelFilter({ labels, activeLabelIds, onToggle }: LabelFilterPro
             onClick={() => onToggle(label.id)}
             className={`flex min-h-9 items-center justify-center rounded-full border px-3 text-xs font-medium ${
               active
-                ? 'border-blue-600 bg-blue-600 text-white'
-                : 'border-gray-300 text-gray-600'
+                ? 'border-accent-600 bg-accent-600 text-white'
+                : 'border-line-strong text-muted'
             }`}
           >
             {label.name}

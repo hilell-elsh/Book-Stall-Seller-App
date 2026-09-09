@@ -20,7 +20,7 @@ export function CategoryManager() {
     <section>
       <h2 className="text-base font-semibold">קטגוריות</h2>
 
-      <ul className="mt-2 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+      <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-surface">
         {categories.map((category, index) => (
           <li key={category.id} className="flex items-center gap-2 p-2">
             <input
@@ -32,13 +32,13 @@ export function CategoryManager() {
                   renameCategory(category.id, trimmed)
                 }
               }}
-              className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-2 text-sm"
+              className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
             />
             <button
               type="button"
               onClick={() => moveCategory(category.id, 'up')}
               disabled={index === 0}
-              className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+              className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
               aria-label="הזז למעלה"
             >
               ↑
@@ -47,7 +47,7 @@ export function CategoryManager() {
               type="button"
               onClick={() => moveCategory(category.id, 'down')}
               disabled={index === categories.length - 1}
-              className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+              className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
               aria-label="הזז למטה"
             >
               ↓
@@ -55,7 +55,7 @@ export function CategoryManager() {
             <button
               type="button"
               onClick={() => setPendingDelete(category)}
-              className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
+              className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
               aria-label="מחק"
             >
               ✕
@@ -63,7 +63,7 @@ export function CategoryManager() {
           </li>
         ))}
         {categories.length === 0 && (
-          <li className="p-3 text-sm text-gray-400">אין עדיין קטגוריות.</li>
+          <li className="p-3 text-sm text-faint">אין עדיין קטגוריות.</li>
         )}
       </ul>
 
@@ -76,12 +76,12 @@ export function CategoryManager() {
             if (e.key === 'Enter') handleAdd()
           }}
           placeholder="שם קטגוריה חדשה"
-          className="min-w-0 flex-1 rounded border border-gray-300 px-2 py-2 text-sm"
+          className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="shrink-0 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          className="shrink-0 rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white"
         >
           הוספה
         </button>

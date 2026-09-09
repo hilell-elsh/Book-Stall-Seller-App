@@ -15,11 +15,11 @@ export function RecordList({ records, onSelect }: RecordListProps) {
   const sorted = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-gray-400">אין עדיין מכירות שמורות.</p>
+    return <p className="text-sm text-faint">אין עדיין מכירות שמורות.</p>
   }
 
   return (
-    <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+    <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
       {sorted.map((record) => {
         const itemCount = record.lines.reduce((sum, line) => sum + line.qty, 0)
         const paymentMethodName = record.paymentMethodId
@@ -39,7 +39,7 @@ export function RecordList({ records, onSelect }: RecordListProps) {
                 <p className="text-sm font-medium">
                   {dateFormatter.format(new Date(record.createdAt))}
                 </p>
-                <p className="text-xs text-gray-500">{details.join(' · ')}</p>
+                <p className="text-xs text-muted">{details.join(' · ')}</p>
               </div>
               <span className="text-base font-semibold">
                 <Money amount={record.total} />

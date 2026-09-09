@@ -49,10 +49,10 @@ export function DiscountRuleManager() {
       <h2 className="text-base font-semibold">מבצעי הנחה</h2>
 
       {categories.length === 0 ? (
-        <p className="mt-2 text-sm text-gray-400">יש להוסיף קודם קטגוריה אחת לפחות.</p>
+        <p className="mt-2 text-sm text-faint">יש להוסיף קודם קטגוריה אחת לפחות.</p>
       ) : (
         <>
-          <ul className="mt-2 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+          <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-surface">
             {discountRules.map((rule, index) => (
               <li key={rule.id} className="flex items-center gap-2 p-2">
                 <input
@@ -66,7 +66,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'up')}
                   disabled={index === 0}
-                  className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
                   aria-label="הזז למעלה"
                 >
                   ↑
@@ -75,7 +75,7 @@ export function DiscountRuleManager() {
                   type="button"
                   onClick={() => moveDiscountRule(rule.id, 'down')}
                   disabled={index === discountRules.length - 1}
-                  className="h-11 w-11 shrink-0 rounded border border-gray-300 text-sm disabled:opacity-30"
+                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm disabled:opacity-30"
                   aria-label="הזז למטה"
                 >
                   ↓
@@ -83,14 +83,14 @@ export function DiscountRuleManager() {
                 <button
                   type="button"
                   onClick={() => setEditing(rule)}
-                  className="h-9 shrink-0 rounded border border-gray-300 px-3 text-sm"
+                  className="h-9 shrink-0 rounded border border-line-strong px-3 text-sm"
                 >
                   עריכה
                 </button>
                 <button
                   type="button"
                   onClick={() => setPendingDelete(rule)}
-                  className="h-11 w-11 shrink-0 rounded border border-red-300 text-sm text-red-600"
+                  className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600"
                   aria-label="מחק"
                 >
                   ✕
@@ -98,14 +98,14 @@ export function DiscountRuleManager() {
               </li>
             ))}
             {discountRules.length === 0 && (
-              <li className="p-3 text-sm text-gray-400">אין עדיין מבצעי הנחה.</li>
+              <li className="p-3 text-sm text-faint">אין עדיין מבצעי הנחה.</li>
             )}
           </ul>
 
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="mt-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+            className="mt-2 rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white"
           >
             מבצע חדש
           </button>

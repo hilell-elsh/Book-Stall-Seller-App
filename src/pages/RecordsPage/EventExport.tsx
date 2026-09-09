@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useAppData } from '../../context/AppDataContext'
 import { downloadCsv } from '../../domain/csv'
-import { buildPaymentReportRows, buildSalesCsvRows, eventNamesFromRecords, recordsForEvent } from '../../domain/reports'
+import {
+  buildItemSummaryRows,
+  buildPaymentReportRows,
+  buildSalesCsvRows,
+  eventNamesFromRecords,
+  recordsForEvent,
+} from '../../domain/reports'
 
 export function EventExport() {
   const { saleRecords, paymentMethods } = useAppData()
@@ -20,6 +26,10 @@ export function EventExport() {
 
   function handleExportPayments() {
     downloadCsv(`דוח תשלומים - ${label}.csv`, buildPaymentReportRows(records, paymentMethods))
+  }
+
+  function handleExportItemSummary() {
+    downloadCsv(`סיכום פריטים - ${label}.csv`, buildItemSummaryRows(records))
   }
 
   return (
@@ -59,6 +69,14 @@ export function EventExport() {
           className="flex min-h-11 items-center rounded border border-line-strong px-3 text-sm font-medium transition-colors hover:bg-subtle disabled:opacity-50"
         >
           ייצוא דוח תשלומים (CSV)
+        </button>
+        <button
+          type="button"
+          onClick={handleExportItemSummary}
+          disabled={records.length === 0}
+          className="flex min-h-11 items-center rounded border border-line-strong px-3 text-sm font-medium transition-colors hover:bg-subtle disabled:opacity-50"
+        >
+          ייצוא סיכום פריטים (CSV)
         </button>
       </div>
     </section>

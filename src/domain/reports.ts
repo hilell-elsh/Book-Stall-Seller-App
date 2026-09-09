@@ -26,39 +26,144 @@ export function buildSalesCsvRows(
   paymentMethods: PaymentMethod[],
 ): string[][] {
   const paymentMethodById = new Map(paymentMethods.map((method) => [method.id, method]))
-  const rows: string[][] = [
-    [
-      'תאריך',
-      'פריטים',
-      'סכום ביניים',
-      'הנחה',
-      'סה"כ',
-      'אמצעי תשלום',
-      'מקבל/ת',
-      'יוצרים',
-    ],
-  ]
+
+  // One column per item/creator that actually appears, in order of first appearance.
+  const itemColumns: string[] = []
+  const itemColumnIndex = new Map<string, number>()
+  const creatorColumns: string[] = []
+  const creatorColumnIndex = new Map<string, number>()
+
+  for (const record of records) {
+    for (const line of record.lines) {
+      if (!itemColumnIndex.has(line.itemId)) {
+        itemColumnIndex.set(line.itemId, itemColumns.length)
+        itemColumns.push(line.itemName)
+      }
+    }
+    for (const payout of computeCreatorPayouts(record)) {
+      if (!creatorColumnIndex.has(payout.creatorId)) {
+        creatorColumnIndex.set(payout.creatorId, creatorColumns.length)
+        creatorColumns.push(payout.creatorName)
+      }
+    }
+  }
+
+  const itemTotalsAgorot = new Array(itemColumns.length).fill(0)
+  const creatorTotalsAgorot = new Array(creatorColumns.length).fill(0)
+  let subtotalAgorot = 0
+  let discountAgorot = 0
+  let totalAgorot = 0
+
+  const dataRows: string[][] = []
   for (const record of records) {
     const paymentMethodName = record.paymentMethodId
       ? (paymentMethodById.get(record.paymentMethodId)?.name ?? '')
       : ''
-    const items = record.lines
-      .map((line) => `${line.itemName} x${line.qty} (${line.lineSubtotal.toFixed(2)})`)
-      .join('; ')
-    const creatorShares = computeCreatorPayouts(record)
-      .map((payout) => `${payout.creatorName} (${payout.amount.toFixed(2)})`)
-      .join('; ')
-    rows.push([
+
+    const itemCells = new Array(itemColumns.length).fill('')
+    for (const line of record.lines) {
+      const amountAgorot = toAgorot(line.lineSubtotal) - toAgorot(line.lineDiscount)
+      const index = itemColumnIndex.get(line.itemId)!
+      itemCells[index] = fromAgorot(amountAgorot).toFixed(2)
+      itemTotalsAgorot[index] += amountAgorot
+    }
+
+    const creatorCells = new Array(creatorColumns.length).fill('')
+    for (const payout of computeCreatorPayouts(record)) {
+      const index = creatorColumnIndex.get(payout.creatorId)!
+      creatorCells[index] = payout.amount.toFixed(2)
+      creatorTotalsAgorot[index] += toAgorot(payout.amount)
+    }
+
+    subtotalAgorot += toAgorot(record.subtotal)
+    discountAgorot += toAgorot(record.totalDiscount)
+    totalAgorot += toAgorot(record.total)
+
+    dataRows.push([
       dateFormatter.format(new Date(record.createdAt)),
-      items,
+      ...itemCells,
       record.subtotal.toFixed(2),
       record.totalDiscount.toFixed(2),
       record.total.toFixed(2),
       paymentMethodName,
       record.receiver ?? '',
-      creatorShares,
+      ...creatorCells,
     ])
   }
+
+  const header = [
+    'תאריך',
+    ...itemColumns,
+    'סכום ביניים',
+    'הנחה',
+    'סה"כ',
+    'אמצעי תשלום',
+    'מקבל/ת',
+    ...creatorColumns,
+  ]
+
+  const totalRow = [
+    'סה"כ',
+    ...itemTotalsAgorot.map((agorot) => fromAgorot(agorot).toFixed(2)),
+    fromAgorot(subtotalAgorot).toFixed(2),
+    fromAgorot(discountAgorot).toFixed(2),
+    fromAgorot(totalAgorot).toFixed(2),
+    '',
+    '',
+    ...creatorTotalsAgorot.map((agorot) => fromAgorot(agorot).toFixed(2)),
+  ]
+
+  return [header, totalRow, ...dataRows]
+}
+
+export function buildItemSummaryRows(records: SaleRecord[]): string[][] {
+  const totals = new Map<
+    string,
+    { itemName: string; categoryName: string; qty: number; subtotalAgorot: number; discountAgorot: number }
+  >()
+
+  for (const record of records) {
+    for (const line of record.lines) {
+      const existing = totals.get(line.itemId)
+      totals.set(line.itemId, {
+        itemName: line.itemName,
+        categoryName: line.categoryName,
+        qty: (existing?.qty ?? 0) + line.qty,
+        subtotalAgorot: (existing?.subtotalAgorot ?? 0) + toAgorot(line.lineSubtotal),
+        discountAgorot: (existing?.discountAgorot ?? 0) + toAgorot(line.lineDiscount),
+      })
+    }
+  }
+
+  const items = [...totals.values()].sort((a, b) => b.qty - a.qty)
+
+  const totalQty = items.reduce((sum, item) => sum + item.qty, 0)
+  const totalSubtotalAgorot = items.reduce((sum, item) => sum + item.subtotalAgorot, 0)
+  const totalDiscountAgorot = items.reduce((sum, item) => sum + item.discountAgorot, 0)
+
+  const rows: string[][] = [
+    ['פריט', 'קטגוריה', 'כמות', 'סכום ביניים', 'הנחה', 'סה"כ'],
+    [
+      'סה"כ',
+      '',
+      String(totalQty),
+      fromAgorot(totalSubtotalAgorot).toFixed(2),
+      fromAgorot(totalDiscountAgorot).toFixed(2),
+      fromAgorot(totalSubtotalAgorot - totalDiscountAgorot).toFixed(2),
+    ],
+  ]
+
+  for (const item of items) {
+    rows.push([
+      item.itemName,
+      item.categoryName,
+      String(item.qty),
+      fromAgorot(item.subtotalAgorot).toFixed(2),
+      fromAgorot(item.discountAgorot).toFixed(2),
+      fromAgorot(item.subtotalAgorot - item.discountAgorot).toFixed(2),
+    ])
+  }
+
   return rows
 }
 

@@ -22,7 +22,7 @@ export function CartLinesList({ lines, onSetQty, onRemove }: CartLinesListProps)
               <Money amount={line.unitPrice} /> ליחידה
             </p>
           </div>
-          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => onSetQty(line.itemId, line.qty - 1)}

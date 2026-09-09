@@ -1,5 +1,5 @@
 import { fromAgorot, toAgorot } from './pricing'
-import { computeCreatorPayouts } from './payouts'
+import { computeCreatorPayouts, splitLineCreatorShares } from './payouts'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
 
@@ -37,6 +37,7 @@ export function buildSalesCsvRows(
       'הנחת שורה',
       'אמצעי תשלום',
       'מקבל/ת',
+      'יוצרים',
     ],
   ]
   for (const record of records) {
@@ -44,6 +45,9 @@ export function buildSalesCsvRows(
       ? (paymentMethodById.get(record.paymentMethodId)?.name ?? '')
       : ''
     for (const line of record.lines) {
+      const creatorShares = splitLineCreatorShares(line)
+        .map((share) => `${share.creatorName} ${share.percentage}% (${share.amount.toFixed(2)})`)
+        .join('; ')
       rows.push([
         dateFormatter.format(new Date(record.createdAt)),
         line.itemName,
@@ -54,6 +58,7 @@ export function buildSalesCsvRows(
         line.lineDiscount.toFixed(2),
         paymentMethodName,
         record.receiver ?? '',
+        creatorShares,
       ])
     }
   }

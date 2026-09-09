@@ -17,10 +17,10 @@ export function CategoryManager() {
   }
 
   return (
-    <section>
+    <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="text-base font-semibold">קטגוריות</h2>
 
-      <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-surface">
+      <ul className="mt-2 divide-y divide-line">
         {categories.map((category, index) => (
           <li key={category.id} className="flex items-center gap-2 p-2">
             <input

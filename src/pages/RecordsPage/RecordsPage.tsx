@@ -14,7 +14,7 @@ export function RecordsPage() {
   }
 
   return (
-    <div className="p-4">
+    <div className="mx-auto max-w-2xl p-4">
       <h1 className="text-lg font-semibold">רשומות</h1>
       <div className="mt-3">
         <RecordList records={saleRecords} onSelect={(record) => setEditingId(record.id)} />

@@ -35,7 +35,7 @@ export function ItemManager() {
 
   if (categories.length === 0) {
     return (
-      <section>
+      <section className="rounded-lg border border-line bg-surface p-4">
         <h2 className="text-base font-semibold">פריטים</h2>
         <p className="mt-2 text-sm text-faint">
           יש להוסיף קודם קטגוריה אחת לפחות.
@@ -45,7 +45,7 @@ export function ItemManager() {
   }
 
   return (
-    <section>
+    <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="text-base font-semibold">פריטים</h2>
 
       {categories.map((category) => {
@@ -53,7 +53,7 @@ export function ItemManager() {
         return (
           <div key={category.id} className="mt-3">
             <h3 className="text-sm font-medium text-muted">{category.name}</h3>
-            <ul className="mt-1 divide-y divide-line rounded-lg border border-line bg-surface">
+            <ul className="mt-1 divide-y divide-line">
               {categoryItems.map((item, index) => (
                 <li key={item.id} className="p-2">
                   <div className="flex items-center gap-2">

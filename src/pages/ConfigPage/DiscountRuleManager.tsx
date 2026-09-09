@@ -21,7 +21,7 @@ export function DiscountRuleManager() {
 
   if (editing) {
     return (
-      <section>
+      <section className="rounded-lg border border-line bg-surface p-4">
         <h2 className="text-base font-semibold">
           {editing === 'new' ? 'מבצע הנחה חדש' : 'עריכת מבצע הנחה'}
         </h2>
@@ -45,14 +45,14 @@ export function DiscountRuleManager() {
   }
 
   return (
-    <section>
+    <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="text-base font-semibold">מבצעי הנחה</h2>
 
       {categories.length === 0 ? (
         <p className="mt-2 text-sm text-faint">יש להוסיף קודם קטגוריה אחת לפחות.</p>
       ) : (
         <>
-          <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-surface">
+          <ul className="mt-2 divide-y divide-line">
             {discountRules.map((rule, index) => (
               <li key={rule.id} className="flex items-center gap-2 p-2">
                 <input

@@ -149,7 +149,7 @@ export function DiscountRuleForm({
   }
 
   return (
-    <div className="mt-2 space-y-3 rounded-lg border border-line bg-surface p-3">
+    <div className="mt-3 space-y-3">
       <div>
         <label className="block text-sm text-muted">שם המבצע</label>
         <input

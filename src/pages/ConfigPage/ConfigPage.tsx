@@ -6,7 +6,7 @@ import { PaymentMethodManager } from './PaymentMethodManager'
 
 export function ConfigPage() {
   return (
-    <div className="p-4 pb-8">
+    <div className="mx-auto max-w-2xl p-4 pb-8">
       <h1 className="text-lg font-semibold">הגדרות</h1>
       <div className="mt-3 space-y-6">
         <CategoryManager />

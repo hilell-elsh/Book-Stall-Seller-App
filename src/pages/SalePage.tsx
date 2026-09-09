@@ -37,7 +37,7 @@ export function SalePage({ cart }: SalePageProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-49px)] max-w-[1400px] flex-col sm:flex-row">
+    <div className="mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row">
       <div className="flex-1">
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
       </div>

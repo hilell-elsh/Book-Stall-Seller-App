@@ -243,7 +243,7 @@ export function ItemManager() {
                                   min="0"
                                   max="100"
                                   defaultValue={share.percentage}
-                                  onBlur={(e) => {
+                                  onChange={(e) => {
                                     const percentage = Number(e.target.value)
                                     if (Number.isFinite(percentage) && percentage >= 0) {
                                       updateCreatorSharePercentage(item.id, share.creatorId, percentage)

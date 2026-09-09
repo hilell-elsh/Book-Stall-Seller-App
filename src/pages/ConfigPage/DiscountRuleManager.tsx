@@ -22,9 +22,19 @@ export function DiscountRuleManager() {
   if (editing) {
     return (
       <section className="rounded-lg border border-line bg-surface p-4">
-        <h2 className="text-base font-semibold">
-          {editing === 'new' ? 'מבצע הנחה חדש' : 'עריכת מבצע הנחה'}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">
+            {editing === 'new' ? 'מבצע הנחה חדש' : 'עריכת מבצע הנחה'}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setEditing(null)}
+            aria-label="סגירה"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded text-lg transition-colors hover:bg-subtle"
+          >
+            ✕
+          </button>
+        </div>
         <DiscountRuleForm
           categories={categories}
           labels={labels}

@@ -147,7 +147,7 @@ export function SideNav({ active, onChange }: SideNavProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-line bg-surface p-3 sm:hidden">
+      <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-surface p-3 sm:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}

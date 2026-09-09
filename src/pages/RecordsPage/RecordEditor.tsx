@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CartLinesList } from '../../components/cart/CartLinesList'
 import { ItemBrowser } from '../../components/cart/ItemBrowser'
+import { MobileCartBar } from '../../components/cart/MobileCartBar'
 import { PaymentSelector } from '../../components/cart/PaymentSelector'
 import { SaleSummary } from '../../components/cart/SaleSummary'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -20,8 +21,10 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
   const [receiver, setReceiver] = useState(record.receiver ?? '')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
+  const hasItems = cart.lines.length > 0
 
   function handleSave() {
     if (!canSave) return
@@ -34,8 +37,14 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
     onClose()
   }
 
+  function scrollToCart() {
+    cartSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <div className="mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row">
+    <div
+      className={`mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row ${hasItems ? 'pb-14 sm:pb-0' : ''}`}
+    >
       <div className="flex-1">
         <div className="flex items-center justify-between p-3">
           <button
@@ -56,7 +65,10 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
       </div>
 
-      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line">
+      <div
+        ref={cartSectionRef}
+        className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line"
+      >
         <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
           <CartLinesList
             lines={cart.evaluated.lines}
@@ -78,6 +90,8 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
           disabled={!canSave}
         />
       </div>
+
+      {hasItems && <MobileCartBar evaluated={cart.evaluated} onJump={scrollToCart} />}
 
       <ConfirmDialog
         open={confirmingDelete}

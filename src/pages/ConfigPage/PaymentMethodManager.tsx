@@ -20,7 +20,27 @@ export function PaymentMethodManager() {
     <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="text-base font-semibold">אמצעי תשלום</h2>
 
-      <ul className="mt-2 divide-y divide-line">
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAdd()
+          }}
+          placeholder="לדוגמה: מזומן, ביט, פייבוקס"
+          className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="shrink-0 rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700"
+        >
+          הוספה
+        </button>
+      </div>
+
+      <ul className="mt-3 divide-y divide-line">
         {paymentMethods.map((method) => (
           <li key={method.id} className="flex items-center gap-2 p-2">
             <input
@@ -48,26 +68,6 @@ export function PaymentMethodManager() {
           <li className="p-3 text-sm text-faint">אין עדיין אמצעי תשלום.</li>
         )}
       </ul>
-
-      <div className="mt-2 flex gap-2">
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleAdd()
-          }}
-          placeholder="לדוגמה: מזומן, ביט, פייבוקס"
-          className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
-        />
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="shrink-0 rounded bg-accent-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700"
-        >
-          הוספה
-        </button>
-      </div>
 
       <ConfirmDialog
         open={pendingDelete !== null}

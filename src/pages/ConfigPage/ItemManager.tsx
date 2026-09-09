@@ -49,116 +49,7 @@ export function ItemManager() {
     <section className="rounded-lg border border-line bg-surface p-4">
       <h2 className="text-base font-semibold">פריטים</h2>
 
-      {categories.map((category) => {
-        const categoryItems = items.filter((item) => item.categoryId === category.id)
-        return (
-          <div key={category.id} className="mt-3">
-            <h3 className="text-sm font-medium text-muted">{category.name}</h3>
-            <ul className="mt-1 divide-y divide-line">
-              {categoryItems.map((item, index) => (
-                <li key={item.id} className={`p-2 ${item.active ? '' : 'opacity-50'}`}>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={item.active}
-                      onChange={() => toggleItemActive(item.id)}
-                      aria-label="פעיל"
-                      className="h-5 w-5 shrink-0"
-                    />
-                    <input
-                      type="text"
-                      defaultValue={item.name}
-                      onBlur={(e) => {
-                        const trimmed = e.target.value.trim()
-                        if (trimmed && trimmed !== item.name) {
-                          updateItem(item.id, { name: trimmed })
-                        }
-                      }}
-                      className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      defaultValue={item.price}
-                      onBlur={(e) => {
-                        const price = Number(e.target.value)
-                        if (Number.isFinite(price) && price >= 0 && price !== item.price) {
-                          updateItem(item.id, { price })
-                        }
-                      }}
-                      className="w-20 shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
-                    />
-                    <select
-                      value={item.categoryId}
-                      onChange={(e) => changeItemCategory(item.id, e.target.value)}
-                      className="shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
-                    >
-                      {categories.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => moveItem(item.id, 'up')}
-                      disabled={index === 0}
-                      className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
-                      aria-label="הזז למעלה"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveItem(item.id, 'down')}
-                      disabled={index === categoryItems.length - 1}
-                      className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
-                      aria-label="הזז למטה"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPendingDelete(item)}
-                      className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
-                      aria-label="מחק"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {labels.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {labels.map((label) => {
-                        const active = item.labelIds.includes(label.id)
-                        return (
-                          <button
-                            key={label.id}
-                            type="button"
-                            onClick={() => toggleItemLabel(item.id, label.id)}
-                            className={`rounded-full border px-2 py-0.5 text-xs ${
-                              active
-                                ? 'border-accent-600 bg-accent-600 text-white'
-                                : 'border-line-strong text-muted'
-                            }`}
-                          >
-                            {label.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </li>
-              ))}
-              {categoryItems.length === 0 && (
-                <li className="p-3 text-sm text-faint">אין עדיין פריטים בקטגוריה זו.</li>
-              )}
-            </ul>
-          </div>
-        )
-      })}
-
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         <select
           value={activeCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
@@ -194,6 +85,121 @@ export function ItemManager() {
           הוספה
         </button>
       </div>
+
+      {categories.map((category) => {
+        const categoryItems = items.filter((item) => item.categoryId === category.id)
+        return (
+          <div key={category.id} className="mt-3">
+            <h3 className="text-sm font-medium text-muted">{category.name}</h3>
+            <ul className="mt-1 divide-y divide-line">
+              {categoryItems.map((item, index) => (
+                <li key={item.id} className={`p-2 ${item.active ? '' : 'opacity-50'}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={item.active}
+                        onChange={() => toggleItemActive(item.id)}
+                        aria-label="פעיל"
+                        className="h-5 w-5 shrink-0"
+                      />
+                      <input
+                        type="text"
+                        defaultValue={item.name}
+                        onBlur={(e) => {
+                          const trimmed = e.target.value.trim()
+                          if (trimmed && trimmed !== item.name) {
+                            updateItem(item.id, { name: trimmed })
+                          }
+                        }}
+                        className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex w-full gap-2 sm:w-auto">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        defaultValue={item.price}
+                        onBlur={(e) => {
+                          const price = Number(e.target.value)
+                          if (Number.isFinite(price) && price >= 0 && price !== item.price) {
+                            updateItem(item.id, { price })
+                          }
+                        }}
+                        className="w-20 shrink-0 rounded border border-line-strong px-2 py-2 text-sm"
+                      />
+                      <select
+                        value={item.categoryId}
+                        onChange={(e) => changeItemCategory(item.id, e.target.value)}
+                        className="min-w-0 flex-1 rounded border border-line-strong px-2 py-2 text-sm sm:flex-none"
+                      >
+                        {categories.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex w-full justify-end gap-2 sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => moveItem(item.id, 'up')}
+                        disabled={index === 0}
+                        className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
+                        aria-label="הזז למעלה"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveItem(item.id, 'down')}
+                        disabled={index === categoryItems.length - 1}
+                        className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
+                        aria-label="הזז למטה"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDelete(item)}
+                        className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
+                        aria-label="מחק"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  {labels.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {labels.map((label) => {
+                        const active = item.labelIds.includes(label.id)
+                        return (
+                          <button
+                            key={label.id}
+                            type="button"
+                            onClick={() => toggleItemLabel(item.id, label.id)}
+                            className={`rounded-full border px-2 py-0.5 text-xs ${
+                              active
+                                ? 'border-accent-600 bg-accent-600 text-white'
+                                : 'border-line-strong text-muted'
+                            }`}
+                          >
+                            {label.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </li>
+              ))}
+              {categoryItems.length === 0 && (
+                <li className="p-3 text-sm text-faint">אין עדיין פריטים בקטגוריה זו.</li>
+              )}
+            </ul>
+          </div>
+        )
+      })}
 
       <ConfirmDialog
         open={pendingDelete !== null}

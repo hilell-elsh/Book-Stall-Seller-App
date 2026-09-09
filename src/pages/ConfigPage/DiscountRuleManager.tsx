@@ -52,56 +52,6 @@ export function DiscountRuleManager() {
         <p className="mt-2 text-sm text-faint">יש להוסיף קודם קטגוריה אחת לפחות.</p>
       ) : (
         <>
-          <ul className="mt-2 divide-y divide-line">
-            {discountRules.map((rule, index) => (
-              <li key={rule.id} className="flex items-center gap-2 p-2">
-                <input
-                  type="checkbox"
-                  checked={rule.enabled}
-                  onChange={() => toggleDiscountRule(rule.id)}
-                  aria-label="פעיל"
-                />
-                <span className="min-w-0 flex-1 truncate text-sm">{rule.name}</span>
-                <button
-                  type="button"
-                  onClick={() => moveDiscountRule(rule.id, 'up')}
-                  disabled={index === 0}
-                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
-                  aria-label="הזז למעלה"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveDiscountRule(rule.id, 'down')}
-                  disabled={index === discountRules.length - 1}
-                  className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
-                  aria-label="הזז למטה"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing(rule)}
-                  className="h-11 shrink-0 rounded border border-line-strong px-3 text-sm transition-colors hover:bg-subtle"
-                >
-                  עריכה
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPendingDelete(rule)}
-                  className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
-                  aria-label="מחק"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-            {discountRules.length === 0 && (
-              <li className="p-3 text-sm text-faint">אין עדיין מבצעי הנחה.</li>
-            )}
-          </ul>
-
           <button
             type="button"
             onClick={() => setEditing('new')}
@@ -109,6 +59,61 @@ export function DiscountRuleManager() {
           >
             מבצע חדש
           </button>
+
+          <ul className="mt-3 divide-y divide-line">
+            {discountRules.map((rule, index) => (
+              <li key={rule.id} className="flex flex-wrap items-center gap-2 p-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={rule.enabled}
+                    onChange={() => toggleDiscountRule(rule.id)}
+                    aria-label="פעיל"
+                    className="h-5 w-5 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm">{rule.name}</span>
+                </div>
+                <div className="flex w-full justify-end gap-2 sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => moveDiscountRule(rule.id, 'up')}
+                    disabled={index === 0}
+                    className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
+                    aria-label="הזז למעלה"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveDiscountRule(rule.id, 'down')}
+                    disabled={index === discountRules.length - 1}
+                    className="h-11 w-11 shrink-0 rounded border border-line-strong text-sm transition-colors hover:bg-subtle disabled:opacity-30 disabled:hover:bg-transparent"
+                    aria-label="הזז למטה"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(rule)}
+                    className="h-11 shrink-0 rounded border border-line-strong px-3 text-sm transition-colors hover:bg-subtle"
+                  >
+                    עריכה
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(rule)}
+                    className="h-11 w-11 shrink-0 rounded border border-danger-300 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
+                    aria-label="מחק"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            ))}
+            {discountRules.length === 0 && (
+              <li className="p-3 text-sm text-faint">אין עדיין מבצעי הנחה.</li>
+            )}
+          </ul>
         </>
       )}
 

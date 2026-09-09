@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CartLinesList } from '../components/cart/CartLinesList'
 import { ItemBrowser } from '../components/cart/ItemBrowser'
+import { MobileCartBar } from '../components/cart/MobileCartBar'
 import { PaymentSelector } from '../components/cart/PaymentSelector'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
@@ -14,8 +15,10 @@ export function SalePage({ cart }: SalePageProps) {
   const { categories, items, labels, paymentMethods, addSaleRecord } = useAppData()
   const [paymentMethodId, setPaymentMethodId] = useState('')
   const [receiver, setReceiver] = useState('')
+  const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
+  const hasItems = cart.lines.length > 0
 
   function handleSave() {
     if (!canSave) return
@@ -23,6 +26,10 @@ export function SalePage({ cart }: SalePageProps) {
     cart.clear()
     setPaymentMethodId('')
     setReceiver('')
+  }
+
+  function scrollToCart() {
+    cartSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   if (categories.length === 0) {
@@ -37,12 +44,17 @@ export function SalePage({ cart }: SalePageProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row">
+    <div
+      className={`mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row ${hasItems ? 'pb-14 sm:pb-0' : ''}`}
+    >
       <div className="flex-1">
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
       </div>
 
-      <div className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line">
+      <div
+        ref={cartSectionRef}
+        className="flex flex-col sm:w-80 sm:shrink-0 sm:border-s sm:border-line"
+      >
         <div className="mt-3 flex-1 sm:mt-0 sm:pt-3">
           <CartLinesList
             lines={cart.evaluated.lines}
@@ -64,6 +76,8 @@ export function SalePage({ cart }: SalePageProps) {
           disabled={!canSave}
         />
       </div>
+
+      {hasItems && <MobileCartBar evaluated={cart.evaluated} onJump={scrollToCart} />}
     </div>
   )
 }

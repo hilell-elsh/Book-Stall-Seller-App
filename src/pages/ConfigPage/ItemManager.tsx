@@ -47,9 +47,11 @@ export function ItemManager() {
   function removeCreatorShare(itemId: string, creatorId: string) {
     const item = items.find((entry) => entry.id === itemId)
     if (!item) return
+    const remaining = item.creatorShares.filter((share) => share.creatorId !== creatorId)
+    // A single remaining creator gets the whole thing — no percentage left to split.
     setItemCreatorShares(
       itemId,
-      item.creatorShares.filter((share) => share.creatorId !== creatorId),
+      remaining.length === 1 ? [{ ...remaining[0], percentage: 100 }] : remaining,
     )
   }
 
@@ -227,26 +229,31 @@ export function ItemManager() {
                       {item.creatorShares.map((share) => {
                         const creator = creators.find((c) => c.id === share.creatorId)
                         if (!creator) return null
+                        const soleCreator = item.creatorShares.length === 1
                         return (
                           <span
                             key={share.creatorId}
                             className="inline-flex items-center gap-1 rounded-full border border-line-strong px-2 py-0.5 text-xs"
                           >
                             {creator.name}
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              defaultValue={share.percentage}
-                              onBlur={(e) => {
-                                const percentage = Number(e.target.value)
-                                if (Number.isFinite(percentage) && percentage >= 0) {
-                                  updateCreatorSharePercentage(item.id, share.creatorId, percentage)
-                                }
-                              }}
-                              className="w-10 rounded border border-line-strong bg-paper px-1 py-0.5 text-center text-xs"
-                            />
-                            %
+                            {!soleCreator && (
+                              <>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  defaultValue={share.percentage}
+                                  onBlur={(e) => {
+                                    const percentage = Number(e.target.value)
+                                    if (Number.isFinite(percentage) && percentage >= 0) {
+                                      updateCreatorSharePercentage(item.id, share.creatorId, percentage)
+                                    }
+                                  }}
+                                  className="w-10 rounded border border-line-strong bg-paper px-1 py-0.5 text-center text-xs"
+                                />
+                                %
+                              </>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeCreatorShare(item.id, share.creatorId)}

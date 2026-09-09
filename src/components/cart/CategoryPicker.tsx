@@ -12,7 +12,7 @@ export function CategoryPicker({ categories, activeCategoryId, onSelect }: Categ
       <button
         type="button"
         onClick={() => onSelect('')}
-        className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${
+        className={`flex min-h-11 shrink-0 items-center justify-center rounded-full border px-4 text-sm font-medium ${
           activeCategoryId === ''
             ? 'border-accent-600 bg-accent-600 text-white'
             : 'border-line-strong text-ink'

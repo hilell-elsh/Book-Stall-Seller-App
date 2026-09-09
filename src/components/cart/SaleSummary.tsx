@@ -45,7 +45,7 @@ export function SaleSummary({ evaluated, actionLabel, onAction, disabled }: Sale
         type="button"
         onClick={onAction}
         disabled={disabled}
-        className="mt-3 w-full rounded-lg bg-accent-600 py-3 text-base font-medium text-white disabled:opacity-40"
+        className="mt-3 w-full rounded-lg bg-accent-600 py-3 text-base font-medium text-white transition-colors enabled:hover:bg-accent-700 disabled:opacity-40"
       >
         {actionLabel}
       </button>

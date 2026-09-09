@@ -17,6 +17,7 @@ export function ItemBrowser({ categories, items, labels, onAdd }: ItemBrowserPro
   const [activeLabelIds, setActiveLabelIds] = useState<string[]>([])
 
   const isShowingAll = activeCategoryId === ''
+  const sellableItems = items.filter((item) => item.active)
 
   function matchesLabelFilter(item: CatalogItem): boolean {
     return (
@@ -31,7 +32,7 @@ export function ItemBrowser({ categories, items, labels, onAdd }: ItemBrowserPro
     )
   }
 
-  const categoryItems = items
+  const categoryItems = sellableItems
     .filter((item) => item.categoryId === activeCategoryId)
     .filter(matchesLabelFilter)
 
@@ -46,7 +47,7 @@ export function ItemBrowser({ categories, items, labels, onAdd }: ItemBrowserPro
       {isShowingAll ? (
         <div className="space-y-3">
           {categories.map((category) => {
-            const itemsInCategory = items
+            const itemsInCategory = sellableItems
               .filter((item) => item.categoryId === category.id)
               .filter(matchesLabelFilter)
             if (itemsInCategory.length === 0) return null

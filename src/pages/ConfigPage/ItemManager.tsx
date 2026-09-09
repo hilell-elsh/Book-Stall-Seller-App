@@ -14,6 +14,7 @@ export function ItemManager() {
     moveItem,
     changeItemCategory,
     toggleItemLabel,
+    toggleItemActive,
   } = useAppData()
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [newName, setNewName] = useState('')
@@ -55,8 +56,15 @@ export function ItemManager() {
             <h3 className="text-sm font-medium text-muted">{category.name}</h3>
             <ul className="mt-1 divide-y divide-line">
               {categoryItems.map((item, index) => (
-                <li key={item.id} className="p-2">
+                <li key={item.id} className={`p-2 ${item.active ? '' : 'opacity-50'}`}>
                   <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.active}
+                      onChange={() => toggleItemActive(item.id)}
+                      aria-label="פעיל"
+                      className="h-5 w-5 shrink-0"
+                    />
                     <input
                       type="text"
                       defaultValue={item.name}

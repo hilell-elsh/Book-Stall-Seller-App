@@ -59,6 +59,8 @@ interface AppDataContextValue {
   renameCreator: (id: string, name: string) => void
   deleteCreator: (id: string) => void
   setItemCreatorShares: (itemId: string, shares: CreatorShare[]) => void
+  eventName: string
+  setEventName: (name: string) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -105,6 +107,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     store.getPaymentMethods(),
   )
   const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
+  const [eventName, setEventNameState] = useState<string>(() => store.getEventName())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -388,6 +391,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateItem(itemId, { creatorShares: shares })
   }
 
+  function setEventName(name: string) {
+    setEventNameState(name)
+    store.saveEventName(name)
+  }
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -426,8 +434,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       renameCreator,
       deleteCreator,
       setItemCreatorShares,
+      eventName,
+      setEventName,
     }),
-    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators],
+    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators, eventName],
   )
 
   return (

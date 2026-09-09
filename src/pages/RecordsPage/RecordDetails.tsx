@@ -27,6 +27,9 @@ export function RecordDetails({ record, onEdit, onClose }: RecordDetailsProps) {
 
   return (
     <div className="p-3">
+      {record.eventName && (
+        <p className="mb-2 text-sm text-muted">אירוע: {record.eventName}</p>
+      )}
       <ul className="divide-y divide-line rounded-lg border border-line">
         {record.lines.map((line) => (
           <li key={line.itemId} className="flex items-center justify-between gap-2 p-2 text-sm">

@@ -28,9 +28,12 @@ export function RecordList({ records, expandedId, onToggle, onCloseExpanded }: R
         const paymentMethodName = record.paymentMethodId
           ? paymentMethodById.get(record.paymentMethodId)?.name
           : undefined
-        const details = [`${itemCount} פריטים`, paymentMethodName, record.receiver].filter(
-          Boolean,
-        )
+        const details = [
+          `${itemCount} פריטים`,
+          paymentMethodName,
+          record.receiver,
+          record.eventName,
+        ].filter(Boolean)
         const isExpanded = record.id === expandedId
         return (
           <li key={record.id}>

@@ -14,7 +14,8 @@ interface RecordEditorProps {
 }
 
 export function RecordEditor({ record, onDone }: RecordEditorProps) {
-  const { categories, items, labels, creators, paymentMethods, updateSaleRecord } = useAppData()
+  const { categories, items, labels, creators, paymentMethods, eventName, updateSaleRecord } =
+    useAppData()
   const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
   const [receiver, setReceiver] = useState(record.receiver ?? '')
@@ -25,7 +26,12 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
 
   function handleSave() {
     if (!canSave) return
-    updateSaleRecord(record.id, { ...cart.evaluated, paymentMethodId, receiver: receiver.trim() })
+    updateSaleRecord(record.id, {
+      ...cart.evaluated,
+      eventName,
+      paymentMethodId,
+      receiver: receiver.trim(),
+    })
     onDone()
   }
 
@@ -71,6 +77,7 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
           receiver={receiver}
           onPaymentMethodChange={setPaymentMethodId}
           onReceiverChange={setReceiver}
+          onSubmit={handleSave}
         />
         <SaleSummary
           evaluated={cart.evaluated}

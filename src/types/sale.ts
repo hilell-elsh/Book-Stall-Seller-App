@@ -32,6 +32,7 @@ export interface SaleRecord {
   id: string
   createdAt: string
   updatedAt: string
+  eventName: string
   paymentMethodId?: string
   receiver?: string
   lines: SaleLineItem[]

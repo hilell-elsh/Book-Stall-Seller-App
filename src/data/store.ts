@@ -14,6 +14,7 @@ const LABELS_KEY = 'labels'
 const SALE_RECORDS_KEY = 'saleRecords'
 const PAYMENT_METHODS_KEY = 'paymentMethods'
 const CREATORS_KEY = 'creators'
+const EVENT_NAME_KEY = 'eventName'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -88,9 +89,10 @@ export function saveLabels(labels: Label[]): void {
 }
 
 export function getSaleRecords(): SaleRecord[] {
-  // lineDiscount/creatorShares were added after some records may have already been saved; default them.
+  // eventName/lineDiscount/creatorShares were added after some records may have already been saved; default them.
   return readJSON<SaleRecord[]>(SALE_RECORDS_KEY, []).map((record) => ({
     ...record,
+    eventName: record.eventName ?? '',
     lines: record.lines.map((line) => ({
       ...line,
       lineDiscount: line.lineDiscount ?? 0,
@@ -117,4 +119,12 @@ export function getCreators(): Creator[] {
 
 export function saveCreators(creators: Creator[]): void {
   writeJSON(CREATORS_KEY, creators)
+}
+
+export function getEventName(): string {
+  return readJSON<string>(EVENT_NAME_KEY, '')
+}
+
+export function saveEventName(name: string): void {
+  writeJSON(EVENT_NAME_KEY, name)
 }

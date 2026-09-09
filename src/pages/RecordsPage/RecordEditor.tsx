@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CartLinesList } from '../../components/cart/CartLinesList'
 import { ItemBrowser } from '../../components/cart/ItemBrowser'
+import { PaymentSelector } from '../../components/cart/PaymentSelector'
 import { SaleSummary } from '../../components/cart/SaleSummary'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAppData } from '../../context/AppDataContext'
@@ -13,12 +14,18 @@ interface RecordEditorProps {
 }
 
 export function RecordEditor({ record, onClose }: RecordEditorProps) {
-  const { categories, items, labels, updateSaleRecord, deleteSaleRecord } = useAppData()
+  const { categories, items, labels, paymentMethods, updateSaleRecord, deleteSaleRecord } =
+    useAppData()
   const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
+  const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
+  const [receiver, setReceiver] = useState(record.receiver ?? '')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
+
   function handleSave() {
-    updateSaleRecord(record.id, cart.evaluated)
+    if (!canSave) return
+    updateSaleRecord(record.id, { ...cart.evaluated, paymentMethodId, receiver: receiver.trim() })
     onClose()
   }
 
@@ -57,11 +64,18 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
             onRemove={cart.removeItem}
           />
         </div>
+        <PaymentSelector
+          paymentMethods={paymentMethods}
+          paymentMethodId={paymentMethodId}
+          receiver={receiver}
+          onPaymentMethodChange={setPaymentMethodId}
+          onReceiverChange={setReceiver}
+        />
         <SaleSummary
           evaluated={cart.evaluated}
           actionLabel="שמור שינויים"
           onAction={handleSave}
-          disabled={cart.lines.length === 0}
+          disabled={!canSave}
         />
       </div>
 

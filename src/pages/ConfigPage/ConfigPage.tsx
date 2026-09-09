@@ -2,6 +2,7 @@ import { CategoryManager } from './CategoryManager'
 import { DiscountRuleManager } from './DiscountRuleManager'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
+import { PaymentMethodManager } from './PaymentMethodManager'
 
 export function ConfigPage() {
   return (
@@ -12,6 +13,7 @@ export function ConfigPage() {
         <LabelManager />
         <ItemManager />
         <DiscountRuleManager />
+        <PaymentMethodManager />
       </div>
     </div>
   )

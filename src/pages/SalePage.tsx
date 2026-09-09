@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { CartLinesList } from '../components/cart/CartLinesList'
 import { ItemBrowser } from '../components/cart/ItemBrowser'
+import { PaymentSelector } from '../components/cart/PaymentSelector'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
 import type { CartState } from '../hooks/useCartState'
@@ -9,12 +11,18 @@ interface SalePageProps {
 }
 
 export function SalePage({ cart }: SalePageProps) {
-  const { categories, items, labels, addSaleRecord } = useAppData()
+  const { categories, items, labels, paymentMethods, addSaleRecord } = useAppData()
+  const [paymentMethodId, setPaymentMethodId] = useState('')
+  const [receiver, setReceiver] = useState('')
+
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
 
   function handleSave() {
-    if (cart.lines.length === 0) return
-    addSaleRecord(cart.evaluated)
+    if (!canSave) return
+    addSaleRecord({ ...cart.evaluated, paymentMethodId, receiver: receiver.trim() })
     cart.clear()
+    setPaymentMethodId('')
+    setReceiver('')
   }
 
   if (categories.length === 0) {
@@ -42,11 +50,18 @@ export function SalePage({ cart }: SalePageProps) {
             onRemove={cart.removeItem}
           />
         </div>
+        <PaymentSelector
+          paymentMethods={paymentMethods}
+          paymentMethodId={paymentMethodId}
+          receiver={receiver}
+          onPaymentMethodChange={setPaymentMethodId}
+          onReceiverChange={setReceiver}
+        />
         <SaleSummary
           evaluated={cart.evaluated}
           actionLabel="שמור מכירה"
           onAction={handleSave}
-          disabled={cart.lines.length === 0}
+          disabled={!canSave}
         />
       </div>
     </div>

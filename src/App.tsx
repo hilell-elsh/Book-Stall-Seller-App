@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavTabs, type TabId } from './components/NavTabs'
+import { SideNav, type TabId } from './components/SideNav'
 import { useCartState } from './hooks/useCartState'
 import { ConfigPage } from './pages/ConfigPage/ConfigPage'
 import { RecordsPage } from './pages/RecordsPage/RecordsPage'
@@ -11,11 +11,13 @@ function App() {
   const cart = useCartState()
 
   return (
-    <div className="min-h-full bg-gray-50">
-      <NavTabs active={activeTab} onChange={setActiveTab} />
-      {activeTab === 'sale' && <SalePage cart={cart} />}
-      {activeTab === 'config' && <ConfigPage />}
-      {activeTab === 'records' && <RecordsPage />}
+    <div className="flex min-h-dvh flex-col bg-paper sm:flex-row">
+      <SideNav active={activeTab} onChange={setActiveTab} />
+      <main className="min-w-0 flex-1">
+        {activeTab === 'sale' && <SalePage cart={cart} />}
+        {activeTab === 'config' && <ConfigPage />}
+        {activeTab === 'records' && <RecordsPage />}
+      </main>
     </div>
   )
 }

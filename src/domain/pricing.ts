@@ -39,10 +39,14 @@ function assertNever(value: never): never {
 
 function matchesSelector(unit: Unit, selector: ItemSelector): boolean {
   switch (selector.type) {
-    case 'category':
-      return selector.categoryIds.includes(unit.categoryId)
-    case 'label':
-      return selector.labelIds.some((labelId) => unit.labelIds.includes(labelId))
+    case 'filter': {
+      const categoryOk =
+        selector.categoryIds.length === 0 || selector.categoryIds.includes(unit.categoryId)
+      const labelOk =
+        selector.labelIds.length === 0 ||
+        selector.labelIds.some((labelId) => unit.labelIds.includes(labelId))
+      return categoryOk && labelOk
+    }
     case 'item':
       return selector.itemIds.includes(unit.itemId)
     default:
@@ -52,16 +56,15 @@ function matchesSelector(unit: Unit, selector: ItemSelector): boolean {
 
 function describeSelector(selector: ItemSelector, maps: NameMaps): string {
   switch (selector.type) {
-    case 'category':
-      return selector.categoryIds
+    case 'filter': {
+      const categoryNames = selector.categoryIds
         .map((id) => maps.categoryById.get(id)?.name)
         .filter((name): name is string => Boolean(name))
-        .join(', ')
-    case 'label':
-      return selector.labelIds
+      const labelNames = selector.labelIds
         .map((id) => maps.labelById.get(id)?.name)
         .filter((name): name is string => Boolean(name))
-        .join(', ')
+      return [...categoryNames, ...labelNames].join(' + ')
+    }
     case 'item':
       return selector.itemIds
         .map((id) => maps.itemById.get(id)?.name)
@@ -73,8 +76,8 @@ function describeSelector(selector: ItemSelector, maps: NameMaps): string {
 }
 
 function describeDiscount(rule: DiscountRule, maps: NameMaps): string {
-  const targetLabel = describeSelector(rule.target, maps)
   if (rule.kind === 'stepDiscount') {
+    const targetLabel = describeSelector(rule.target, maps)
     const discountLabel =
       rule.discount.kind === 'flat'
         ? `${rule.discount.amount}₪`
@@ -82,7 +85,15 @@ function describeDiscount(rule: DiscountRule, maps: NameMaps): string {
     return `${targetLabel}: הנחה של ${discountLabel} מהפריט ה-${rule.startFromNth} ואילך`
   }
 
-  return `${rule.bundleSize} יחידות מ-${targetLabel} במחיר חבילה ${rule.bundlePrice}₪`
+  if (rule.kind === 'bundlePrice') {
+    const targetLabel = describeSelector(rule.target, maps)
+    return `${rule.bundleSize} יחידות מ-${targetLabel} במחיר חבילה ${rule.bundlePrice}₪`
+  }
+
+  const componentsLabel = rule.components
+    .map((component) => `${component.qty}×${describeSelector(component.target, maps)}`)
+    .join(' + ')
+  return `קומבו: ${componentsLabel} ב-${rule.bundlePrice}₪`
 }
 
 export function evaluateSale(
@@ -172,6 +183,43 @@ export function evaluateSale(
             0,
             qualifyingTotal - toAgorot(rule.bundlePrice) * numBundles,
           )
+        }
+        break
+      }
+      case 'comboBundle': {
+        // Components are expected to target non-overlapping sets of units for
+        // predictable results; a unit matching two components' selectors is
+        // only ever consumed by whichever component claims it first below.
+        if (rule.components.length > 0) {
+          const rawCounts = rule.components.map(
+            (component) => units.filter((unit) => matchesSelector(unit, component.target)).length,
+          )
+          const numCombos = Math.min(
+            ...rule.components.map((component, i) => Math.floor(rawCounts[i] / component.qty)),
+          )
+
+          if (numCombos > 0) {
+            const usedIndices = new Set<number>()
+            let qualifyingTotal = 0
+
+            for (const component of rule.components) {
+              const pool = units
+                .map((unit, index) => ({ unit, index }))
+                .filter(({ unit, index }) => !usedIndices.has(index) && matchesSelector(unit, component.target))
+                .sort((a, b) => b.unit.unitPriceAgorot - a.unit.unitPriceAgorot)
+                .slice(0, numCombos * component.qty)
+
+              for (const { unit, index } of pool) {
+                usedIndices.add(index)
+                qualifyingTotal += unit.unitPriceAgorot
+              }
+            }
+
+            discountAgorot = Math.max(
+              0,
+              qualifyingTotal - toAgorot(rule.bundlePrice) * numCombos,
+            )
+          }
         }
         break
       }

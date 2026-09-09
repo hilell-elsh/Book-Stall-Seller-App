@@ -10,11 +10,11 @@ interface SaleSummaryProps {
 
 export function SaleSummary({ evaluated, actionLabel, onAction, disabled }: SaleSummaryProps) {
   return (
-    <div className="sticky bottom-0 border-t border-gray-200 bg-white p-3">
+    <div className="sticky bottom-0 border-t border-line bg-surface p-3">
       {evaluated.discounts.length > 0 && (
         <ul className="mb-2 space-y-1">
           {evaluated.discounts.map((discount) => (
-            <li key={discount.ruleId} className="flex justify-between text-sm text-green-700">
+            <li key={discount.ruleId} className="flex justify-between text-sm text-success-600">
               <span>{discount.description}</span>
               <span>
                 −<Money amount={discount.amount} />
@@ -24,12 +24,12 @@ export function SaleSummary({ evaluated, actionLabel, onAction, disabled }: Sale
         </ul>
       )}
 
-      <div className="flex justify-between text-sm text-gray-500">
+      <div className="flex justify-between text-sm text-muted">
         <span>סכום ביניים</span>
         <Money amount={evaluated.subtotal} />
       </div>
       {evaluated.totalDiscount > 0 && (
-        <div className="flex justify-between text-sm text-gray-500">
+        <div className="flex justify-between text-sm text-muted">
           <span>סה"כ הנחה</span>
           <span>
             −<Money amount={evaluated.totalDiscount} />
@@ -45,7 +45,7 @@ export function SaleSummary({ evaluated, actionLabel, onAction, disabled }: Sale
         type="button"
         onClick={onAction}
         disabled={disabled}
-        className="mt-3 w-full rounded-lg bg-blue-600 py-3 text-base font-medium text-white disabled:opacity-40"
+        className="mt-3 w-full rounded-lg bg-accent-600 py-3 text-base font-medium text-white transition-colors enabled:hover:bg-accent-700 disabled:opacity-40"
       >
         {actionLabel}
       </button>

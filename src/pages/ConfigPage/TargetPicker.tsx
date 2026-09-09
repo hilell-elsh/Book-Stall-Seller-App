@@ -21,59 +21,65 @@ export function TargetPicker({ categories, labels, items, value, onChange }: Tar
         value={value.type}
         onChange={(e) => {
           const type = e.target.value as ItemSelector['type']
-          if (type === 'category') onChange({ type, categoryIds: [] })
-          else if (type === 'label') onChange({ type, labelIds: [] })
+          if (type === 'filter') onChange({ type, categoryIds: [], labelIds: [] })
           else onChange({ type, itemIds: [] })
         }}
-        className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
+        className="w-full rounded border border-line-strong px-2 py-2 text-sm"
       >
-        <option value="category">קטגוריה</option>
-        <option value="label">תווית</option>
+        <option value="filter">קטגוריה ו/או תווית</option>
         <option value="item">פריט ספציפי</option>
       </select>
 
-      {value.type === 'category' && (
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <label
-              key={category.id}
-              className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={value.categoryIds.includes(category.id)}
-                onChange={() =>
-                  onChange({ type: 'category', categoryIds: toggleInArray(value.categoryIds, category.id) })
-                }
-              />
-              {category.name}
-            </label>
-          ))}
-          {categories.length === 0 && (
-            <p className="text-sm text-gray-400">אין עדיין קטגוריות.</p>
-          )}
-        </div>
-      )}
-
-      {value.type === 'label' && (
-        <div className="flex flex-wrap gap-2">
-          {labels.map((label) => (
-            <label
-              key={label.id}
-              className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={value.labelIds.includes(label.id)}
-                onChange={() =>
-                  onChange({ type: 'label', labelIds: toggleInArray(value.labelIds, label.id) })
-                }
-              />
-              {label.name}
-            </label>
-          ))}
-          {labels.length === 0 && <p className="text-sm text-gray-400">אין עדיין תוויות.</p>}
-        </div>
+      {value.type === 'filter' && (
+        <>
+          <div>
+            <span className="block text-xs text-muted">קטגוריה (אופציונלי)</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <label
+                  key={category.id}
+                  className="flex items-center gap-1 rounded border border-line-strong px-2 py-1 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={value.categoryIds.includes(category.id)}
+                    onChange={() =>
+                      onChange({
+                        ...value,
+                        categoryIds: toggleInArray(value.categoryIds, category.id),
+                      })
+                    }
+                  />
+                  {category.name}
+                </label>
+              ))}
+              {categories.length === 0 && (
+                <p className="text-sm text-faint">אין עדיין קטגוריות.</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <span className="block text-xs text-muted">תווית (אופציונלי)</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {labels.map((label) => (
+                <label
+                  key={label.id}
+                  className="flex items-center gap-1 rounded border border-line-strong px-2 py-1 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={value.labelIds.includes(label.id)}
+                    onChange={() =>
+                      onChange({ ...value, labelIds: toggleInArray(value.labelIds, label.id) })
+                    }
+                  />
+                  {label.name}
+                </label>
+              ))}
+              {labels.length === 0 && <p className="text-sm text-faint">אין עדיין תוויות.</p>}
+            </div>
+          </div>
+        </>
       )}
 
       {value.type === 'item' && (
@@ -83,12 +89,12 @@ export function TargetPicker({ categories, labels, items, value, onChange }: Tar
             if (categoryItems.length === 0) return null
             return (
               <div key={category.id}>
-                <span className="text-xs text-gray-500">{category.name}</span>
+                <span className="text-xs text-muted">{category.name}</span>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {categoryItems.map((item) => (
                     <label
                       key={item.id}
-                      className="flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="flex items-center gap-1 rounded border border-line-strong px-2 py-1 text-sm"
                     >
                       <input
                         type="checkbox"
@@ -104,7 +110,7 @@ export function TargetPicker({ categories, labels, items, value, onChange }: Tar
               </div>
             )
           })}
-          {items.length === 0 && <p className="text-sm text-gray-400">אין עדיין פריטים.</p>}
+          {items.length === 0 && <p className="text-sm text-faint">אין עדיין פריטים.</p>}
         </div>
       )}
     </div>

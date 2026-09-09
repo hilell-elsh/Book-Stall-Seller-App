@@ -1,23 +1,25 @@
 import { useState } from 'react'
 import { useAppData } from '../../context/AppDataContext'
-import { RecordEditor } from './RecordEditor'
 import { RecordList } from './RecordList'
 
 export function RecordsPage() {
   const { saleRecords } = useAppData()
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const editingRecord = saleRecords.find((record) => record.id === editingId) ?? null
-
-  if (editingRecord) {
-    return <RecordEditor record={editingRecord} onClose={() => setEditingId(null)} />
+  function handleToggle(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id))
   }
 
   return (
-    <div className="p-4">
+    <div className="mx-auto max-w-2xl p-4">
       <h1 className="text-lg font-semibold">רשומות</h1>
       <div className="mt-3">
-        <RecordList records={saleRecords} onSelect={(record) => setEditingId(record.id)} />
+        <RecordList
+          records={saleRecords}
+          expandedId={expandedId}
+          onToggle={handleToggle}
+          onCloseExpanded={() => setExpandedId(null)}
+        />
       </div>
     </div>
   )

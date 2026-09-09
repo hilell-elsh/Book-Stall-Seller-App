@@ -23,7 +23,7 @@ interface AppDataContextValue {
   addItem: (categoryId: string, name: string, price: number) => void
   updateItem: (
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds'>>,
+    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active'>>,
   ) => void
   deleteItem: (id: string) => void
   moveItem: (id: string, direction: 'up' | 'down') => void
@@ -39,6 +39,7 @@ interface AppDataContextValue {
   renameLabel: (id: string, name: string) => void
   deleteLabel: (id: string) => void
   toggleItemLabel: (itemId: string, labelId: string) => void
+  toggleItemActive: (itemId: string) => void
   saleRecords: SaleRecord[]
   addSaleRecord: (record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
   updateSaleRecord: (
@@ -176,7 +177,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function updateItem(
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds'>>,
+    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active'>>,
   ) {
     persistItems(
       items.map((item) =>
@@ -291,6 +292,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateItem(itemId, { labelIds: nextLabelIds })
   }
 
+  function toggleItemActive(itemId: string) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item) return
+    updateItem(itemId, { active: !item.active })
+  }
+
   function addSaleRecord(record: Omit<SaleRecord, 'id' | 'createdAt' | 'updatedAt'>) {
     const saleRecord: SaleRecord = {
       ...record,
@@ -357,6 +364,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       renameLabel,
       deleteLabel,
       toggleItemLabel,
+      toggleItemActive,
       saleRecords,
       addSaleRecord,
       updateSaleRecord,

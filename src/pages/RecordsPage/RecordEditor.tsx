@@ -77,6 +77,7 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
           receiver={receiver}
           onPaymentMethodChange={setPaymentMethodId}
           onReceiverChange={setReceiver}
+          onSubmit={handleSave}
         />
         <SaleSummary
           evaluated={cart.evaluated}

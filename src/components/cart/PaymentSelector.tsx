@@ -6,6 +6,7 @@ interface PaymentSelectorProps {
   receiver: string
   onPaymentMethodChange: (id: string) => void
   onReceiverChange: (name: string) => void
+  onSubmit?: () => void
 }
 
 export function PaymentSelector({
@@ -14,6 +15,7 @@ export function PaymentSelector({
   receiver,
   onPaymentMethodChange,
   onReceiverChange,
+  onSubmit,
 }: PaymentSelectorProps) {
   if (paymentMethods.length === 0) {
     return (
@@ -46,6 +48,12 @@ export function PaymentSelector({
           type="text"
           value={receiver}
           onChange={(e) => onReceiverChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              onSubmit?.()
+            }
+          }}
           placeholder="שם מי שקיבל/ה את התשלום"
           className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
         />

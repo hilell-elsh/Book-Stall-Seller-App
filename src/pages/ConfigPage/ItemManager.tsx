@@ -249,7 +249,7 @@ export function ItemManager() {
                                       updateCreatorSharePercentage(item.id, share.creatorId, percentage)
                                     }
                                   }}
-                                  className="w-10 rounded border border-line-strong bg-paper px-1 py-0.5 text-center text-xs"
+                                  className="w-14 shrink-0 rounded border border-line-strong bg-paper px-1 py-0.5 text-center text-xs"
                                 />
                                 %
                               </>

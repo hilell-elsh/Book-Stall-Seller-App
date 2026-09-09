@@ -12,7 +12,7 @@ interface SalePageProps {
 }
 
 export function SalePage({ cart }: SalePageProps) {
-  const { categories, items, labels, paymentMethods, addSaleRecord } = useAppData()
+  const { categories, items, labels, creators, paymentMethods, addSaleRecord } = useAppData()
   const [paymentMethodId, setPaymentMethodId] = useState('')
   const [receiver, setReceiver] = useState('')
   const cartSectionRef = useRef<HTMLDivElement>(null)
@@ -48,7 +48,13 @@ export function SalePage({ cart }: SalePageProps) {
       className={`mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row ${hasItems ? 'pb-14 sm:pb-0' : ''}`}
     >
       <div className="flex-1">
-        <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
+        <ItemBrowser
+          categories={categories}
+          items={items}
+          labels={labels}
+          creators={creators}
+          onAdd={cart.addItem}
+        />
       </div>
 
       <div

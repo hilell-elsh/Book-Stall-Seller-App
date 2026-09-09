@@ -17,6 +17,7 @@ interface Unit {
   itemId: string
   categoryId: string
   labelIds: string[]
+  creatorIds: string[]
   unitPriceAgorot: number
   discountAgorot: number
 }
@@ -24,6 +25,7 @@ interface Unit {
 interface NameMaps {
   categoryById: Map<string, Category>
   labelById: Map<string, Label>
+  creatorById: Map<string, Creator>
   itemById: Map<string, CatalogItem>
 }
 
@@ -67,7 +69,10 @@ function matchesSelector(unit: Unit, selector: ItemSelector): boolean {
       const labelOk =
         selector.labelIds.length === 0 ||
         selector.labelIds.some((labelId) => unit.labelIds.includes(labelId))
-      return categoryOk && labelOk
+      const creatorOk =
+        selector.creatorIds.length === 0 ||
+        selector.creatorIds.some((creatorId) => unit.creatorIds.includes(creatorId))
+      return categoryOk && labelOk && creatorOk
     }
     case 'item':
       return selector.itemIds.includes(unit.itemId)
@@ -85,7 +90,10 @@ function describeSelector(selector: ItemSelector, maps: NameMaps): string {
       const labelNames = selector.labelIds
         .map((id) => maps.labelById.get(id)?.name)
         .filter((name): name is string => Boolean(name))
-      return [...categoryNames, ...labelNames].join(' + ')
+      const creatorNames = selector.creatorIds
+        .map((id) => maps.creatorById.get(id)?.name)
+        .filter((name): name is string => Boolean(name))
+      return [...categoryNames, ...labelNames, ...creatorNames].join(' + ')
     }
     case 'item':
       return selector.itemIds
@@ -130,7 +138,7 @@ export function evaluateSale(
   const categoryById = new Map(categories.map((category) => [category.id, category]))
   const labelById = new Map(labels.map((label) => [label.id, label]))
   const creatorById = new Map(creators.map((creator) => [creator.id, creator]))
-  const maps: NameMaps = { categoryById, labelById, itemById }
+  const maps: NameMaps = { categoryById, labelById, creatorById, itemById }
 
   const lines: SaleLineItem[] = []
   const units: Unit[] = []
@@ -163,6 +171,7 @@ export function evaluateSale(
         itemId: item.id,
         categoryId: item.categoryId,
         labelIds: item.labelIds,
+        creatorIds: item.creatorShares.map((share) => share.creatorId),
         unitPriceAgorot,
         discountAgorot: 0,
       })

@@ -38,13 +38,24 @@ export function saveItems(items: CatalogItem[]): void {
 
 // The old category/label selector shapes were merged into one 'filter' shape;
 // normalize any rules saved before that change so they don't crash on load.
+// creatorIds was added to 'filter' later, so default it too.
 function normalizeSelector(raw: unknown): ItemSelector {
-  const selector = raw as { type?: string; categoryIds?: string[]; labelIds?: string[] } | undefined
+  const selector = raw as
+    | { type?: string; categoryIds?: string[]; labelIds?: string[]; creatorIds?: string[] }
+    | undefined
   if (selector?.type === 'category') {
-    return { type: 'filter', categoryIds: selector.categoryIds ?? [], labelIds: [] }
+    return { type: 'filter', categoryIds: selector.categoryIds ?? [], labelIds: [], creatorIds: [] }
   }
   if (selector?.type === 'label') {
-    return { type: 'filter', categoryIds: [], labelIds: selector.labelIds ?? [] }
+    return { type: 'filter', categoryIds: [], labelIds: selector.labelIds ?? [], creatorIds: [] }
+  }
+  if (selector?.type === 'filter') {
+    return {
+      type: 'filter',
+      categoryIds: selector.categoryIds ?? [],
+      labelIds: selector.labelIds ?? [],
+      creatorIds: selector.creatorIds ?? [],
+    }
   }
   return selector as ItemSelector
 }

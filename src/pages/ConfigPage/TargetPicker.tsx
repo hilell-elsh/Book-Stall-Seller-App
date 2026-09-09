@@ -1,10 +1,12 @@
 import type { Category, CatalogItem } from '../../types/catalog'
+import type { Creator } from '../../types/creator'
 import type { Label } from '../../types/label'
 import type { ItemSelector } from '../../types/selector'
 
 interface TargetPickerProps {
   categories: Category[]
   labels: Label[]
+  creators: Creator[]
   items: CatalogItem[]
   value: ItemSelector
   onChange: (next: ItemSelector) => void
@@ -14,19 +16,19 @@ function toggleInArray(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((entry) => entry !== id) : [...list, id]
 }
 
-export function TargetPicker({ categories, labels, items, value, onChange }: TargetPickerProps) {
+export function TargetPicker({ categories, labels, creators, items, value, onChange }: TargetPickerProps) {
   return (
     <div className="space-y-2">
       <select
         value={value.type}
         onChange={(e) => {
           const type = e.target.value as ItemSelector['type']
-          if (type === 'filter') onChange({ type, categoryIds: [], labelIds: [] })
+          if (type === 'filter') onChange({ type, categoryIds: [], labelIds: [], creatorIds: [] })
           else onChange({ type, itemIds: [] })
         }}
         className="w-full rounded border border-line-strong px-2 py-2 text-sm"
       >
-        <option value="filter">קטגוריה ו/או תווית</option>
+        <option value="filter">קטגוריה, תווית ו/או יוצר</option>
         <option value="item">פריט ספציפי</option>
       </select>
 
@@ -77,6 +79,30 @@ export function TargetPicker({ categories, labels, items, value, onChange }: Tar
                 </label>
               ))}
               {labels.length === 0 && <p className="text-sm text-faint">אין עדיין תוויות.</p>}
+            </div>
+          </div>
+          <div>
+            <span className="block text-xs text-muted">יוצר (אופציונלי)</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {creators.map((creator) => (
+                <label
+                  key={creator.id}
+                  className="flex items-center gap-1 rounded border border-line-strong px-2 py-1 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={value.creatorIds.includes(creator.id)}
+                    onChange={() =>
+                      onChange({
+                        ...value,
+                        creatorIds: toggleInArray(value.creatorIds, creator.id),
+                      })
+                    }
+                  />
+                  {creator.name}
+                </label>
+              ))}
+              {creators.length === 0 && <p className="text-sm text-faint">אין עדיין יוצרים.</p>}
             </div>
           </div>
         </>

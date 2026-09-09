@@ -14,7 +14,7 @@ interface RecordEditorProps {
 }
 
 export function RecordEditor({ record, onDone }: RecordEditorProps) {
-  const { categories, items, labels, paymentMethods, updateSaleRecord } = useAppData()
+  const { categories, items, labels, creators, paymentMethods, updateSaleRecord } = useAppData()
   const cart = useCartState(record.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })))
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
   const [receiver, setReceiver] = useState(record.receiver ?? '')
@@ -45,7 +45,13 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
             ביטול
           </button>
         </div>
-        <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />
+        <ItemBrowser
+          categories={categories}
+          items={items}
+          labels={labels}
+          creators={creators}
+          onAdd={cart.addItem}
+        />
       </div>
 
       <div

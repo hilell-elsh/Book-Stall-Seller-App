@@ -3,6 +3,12 @@ export interface CartLine {
   qty: number
 }
 
+export interface LineCreatorShare {
+  creatorId: string
+  creatorName: string
+  percentage: number
+}
+
 export interface SaleLineItem {
   itemId: string
   itemName: string
@@ -11,6 +17,8 @@ export interface SaleLineItem {
   unitPrice: number
   qty: number
   lineSubtotal: number
+  lineDiscount: number
+  creatorShares: LineCreatorShare[]
 }
 
 export interface AppliedDiscount {

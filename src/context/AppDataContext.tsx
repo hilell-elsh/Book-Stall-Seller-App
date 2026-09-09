@@ -7,7 +7,8 @@ import {
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
-import type { Category, CatalogItem } from '../types/catalog'
+import type { Category, CatalogItem, CreatorShare } from '../types/catalog'
+import type { Creator } from '../types/creator'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
 import type { Label } from '../types/label'
 import type { PaymentMethod } from '../types/paymentMethod'
@@ -23,7 +24,9 @@ interface AppDataContextValue {
   addItem: (categoryId: string, name: string, price: number) => void
   updateItem: (
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active'>>,
+    changes: Partial<
+      Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active' | 'creatorShares'>
+    >,
   ) => void
   deleteItem: (id: string) => void
   moveItem: (id: string, direction: 'up' | 'down') => void
@@ -51,6 +54,11 @@ interface AppDataContextValue {
   addPaymentMethod: (name: string) => void
   renamePaymentMethod: (id: string, name: string) => void
   deletePaymentMethod: (id: string) => void
+  creators: Creator[]
+  addCreator: (name: string) => void
+  renameCreator: (id: string, name: string) => void
+  deleteCreator: (id: string) => void
+  setItemCreatorShares: (itemId: string, shares: CreatorShare[]) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -96,6 +104,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(() =>
     store.getPaymentMethods(),
   )
+  const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
 
   function persistCategories(next: Category[]) {
     setCategories(next)
@@ -125,6 +134,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function persistPaymentMethods(next: PaymentMethod[]) {
     setPaymentMethods(next)
     store.savePaymentMethods(next)
+  }
+
+  function persistCreators(next: Creator[]) {
+    setCreators(next)
+    store.saveCreators(next)
   }
 
   function addCategory(name: string) {
@@ -169,6 +183,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       order: nextOrder,
       active: true,
       labelIds: [],
+      creatorShares: [],
       createdAt: now(),
       updatedAt: now(),
     }
@@ -177,7 +192,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function updateItem(
     id: string,
-    changes: Partial<Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active'>>,
+    changes: Partial<
+      Pick<CatalogItem, 'name' | 'price' | 'categoryId' | 'labelIds' | 'active' | 'creatorShares'>
+    >,
   ) {
     persistItems(
       items.map((item) =>
@@ -340,6 +357,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     persistPaymentMethods(paymentMethods.filter((method) => method.id !== id))
   }
 
+  function addCreator(name: string) {
+    const creator: Creator = { id: newId(), name, createdAt: now(), updatedAt: now() }
+    persistCreators([...creators, creator])
+  }
+
+  function renameCreator(id: string, name: string) {
+    persistCreators(
+      creators.map((creator) => (creator.id === id ? { ...creator, name, updatedAt: now() } : creator)),
+    )
+  }
+
+  function deleteCreator(id: string) {
+    persistCreators(creators.filter((creator) => creator.id !== id))
+    // Unlink rather than block: removing a creator shouldn't strand an item's remaining shares.
+    persistItems(
+      items.map((item) =>
+        item.creatorShares.some((share) => share.creatorId === id)
+          ? {
+              ...item,
+              creatorShares: item.creatorShares.filter((share) => share.creatorId !== id),
+              updatedAt: now(),
+            }
+          : item,
+      ),
+    )
+  }
+
+  function setItemCreatorShares(itemId: string, shares: CreatorShare[]) {
+    updateItem(itemId, { creatorShares: shares })
+  }
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       categories: sortByOrder(categories),
@@ -373,8 +421,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       addPaymentMethod,
       renamePaymentMethod,
       deletePaymentMethod,
+      creators,
+      addCreator,
+      renameCreator,
+      deleteCreator,
+      setItemCreatorShares,
     }),
-    [categories, items, discountRules, labels, saleRecords, paymentMethods],
+    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators],
   )
 
   return (

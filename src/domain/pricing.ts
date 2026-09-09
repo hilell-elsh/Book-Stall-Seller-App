@@ -1,4 +1,5 @@
 import type { Category, CatalogItem } from '../types/catalog'
+import type { Creator } from '../types/creator'
 import type { DiscountRule } from '../types/discount'
 import type { Label } from '../types/label'
 import type { ItemSelector } from '../types/selector'
@@ -17,6 +18,7 @@ interface Unit {
   categoryId: string
   labelIds: string[]
   unitPriceAgorot: number
+  discountAgorot: number
 }
 
 interface NameMaps {
@@ -25,12 +27,32 @@ interface NameMaps {
   itemById: Map<string, CatalogItem>
 }
 
-function toAgorot(shekels: number): number {
+export function toAgorot(shekels: number): number {
   return Math.round(shekels * 100)
 }
 
-function fromAgorot(agorot: number): number {
+export function fromAgorot(agorot: number): number {
   return agorot / 100
+}
+
+// Splits `totalAgorot` of discount across `units` proportionally to each unit's
+// price, clamped so a unit already carrying discount from an earlier rule never
+// goes below zero. The remainder goes to the last unit so the split sums exactly.
+function distributeDiscount(units: Unit[], totalAgorot: number): void {
+  if (totalAgorot <= 0 || units.length === 0) return
+  const priceSum = units.reduce((sum, unit) => sum + unit.unitPriceAgorot, 0)
+  let allocated = 0
+  units.forEach((unit, index) => {
+    const isLast = index === units.length - 1
+    const share = isLast
+      ? totalAgorot - allocated
+      : priceSum > 0
+        ? Math.round((totalAgorot * unit.unitPriceAgorot) / priceSum)
+        : 0
+    const applied = Math.max(0, Math.min(share, unit.unitPriceAgorot - unit.discountAgorot))
+    unit.discountAgorot += applied
+    allocated += applied
+  })
 }
 
 function assertNever(value: never): never {
@@ -101,11 +123,13 @@ export function evaluateSale(
   categories: Category[],
   items: CatalogItem[],
   labels: Label[],
+  creators: Creator[],
   rules: DiscountRule[],
 ): EvaluatedSale {
   const itemById = new Map(items.map((item) => [item.id, item]))
   const categoryById = new Map(categories.map((category) => [category.id, category]))
   const labelById = new Map(labels.map((label) => [label.id, label]))
+  const creatorById = new Map(creators.map((creator) => [creator.id, creator]))
   const maps: NameMaps = { categoryById, labelById, itemById }
 
   const lines: SaleLineItem[] = []
@@ -124,6 +148,14 @@ export function evaluateSale(
       unitPrice: item.price,
       qty: cartLine.qty,
       lineSubtotal: fromAgorot(unitPriceAgorot * cartLine.qty),
+      lineDiscount: 0,
+      creatorShares: item.creatorShares
+        .map((share) => ({
+          creatorId: share.creatorId,
+          creatorName: creatorById.get(share.creatorId)?.name ?? '',
+          percentage: share.percentage,
+        }))
+        .filter((share) => share.creatorName !== ''),
     })
 
     for (let i = 0; i < cartLine.qty; i++) {
@@ -132,6 +164,7 @@ export function evaluateSale(
         categoryId: item.categoryId,
         labelIds: item.labelIds,
         unitPriceAgorot,
+        discountAgorot: 0,
       })
     }
   }
@@ -163,7 +196,9 @@ export function evaluateSale(
               rule.discount.kind === 'flat'
                 ? toAgorot(rule.discount.amount)
                 : Math.round((unit.unitPriceAgorot * rule.discount.percent) / 100)
-            discountAgorot += Math.min(perUnit, unit.unitPriceAgorot)
+            const applied = Math.min(perUnit, unit.unitPriceAgorot - unit.discountAgorot)
+            unit.discountAgorot += applied
+            discountAgorot += applied
           }
         }
         break
@@ -183,6 +218,7 @@ export function evaluateSale(
             0,
             qualifyingTotal - toAgorot(rule.bundlePrice) * numBundles,
           )
+          distributeDiscount(qualifying, discountAgorot)
         }
         break
       }
@@ -200,6 +236,7 @@ export function evaluateSale(
 
           if (numCombos > 0) {
             const usedIndices = new Set<number>()
+            const consumedUnits: Unit[] = []
             let qualifyingTotal = 0
 
             for (const component of rule.components) {
@@ -211,6 +248,7 @@ export function evaluateSale(
 
               for (const { unit, index } of pool) {
                 usedIndices.add(index)
+                consumedUnits.push(unit)
                 qualifyingTotal += unit.unitPriceAgorot
               }
             }
@@ -219,6 +257,7 @@ export function evaluateSale(
               0,
               qualifyingTotal - toAgorot(rule.bundlePrice) * numCombos,
             )
+            distributeDiscount(consumedUnits, discountAgorot)
           }
         }
         break
@@ -242,6 +281,17 @@ export function evaluateSale(
     0,
   )
   const totalAgorot = Math.max(0, subtotalAgorot - totalDiscountAgorot)
+
+  const discountAgorotByItemId = new Map<string, number>()
+  for (const unit of units) {
+    discountAgorotByItemId.set(
+      unit.itemId,
+      (discountAgorotByItemId.get(unit.itemId) ?? 0) + unit.discountAgorot,
+    )
+  }
+  for (const line of lines) {
+    line.lineDiscount = fromAgorot(discountAgorotByItemId.get(line.itemId) ?? 0)
+  }
 
   return {
     lines,

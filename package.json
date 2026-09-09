@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:offline": "tsc -b && vite build --config vite.config.offline.ts",
+    "build:offline:demo": "tsc -b && VITE_SEED_DEMO=true vite build --config vite.config.offline.ts --outDir dist-offline-demo",
     "lint": "oxlint",
     "preview": "vite preview"
   },

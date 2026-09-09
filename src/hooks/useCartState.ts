@@ -13,7 +13,7 @@ export interface CartState {
 }
 
 export function useCartState(initialLines: CartLine[] = []): CartState {
-  const { categories, items, labels, discountRules } = useAppData()
+  const { categories, items, labels, creators, discountRules } = useAppData()
   const [lines, setLines] = useState<CartLine[]>(initialLines)
 
   function addItem(itemId: string) {
@@ -45,8 +45,8 @@ export function useCartState(initialLines: CartLine[] = []): CartState {
   }
 
   const evaluated = useMemo(
-    () => evaluateSale(lines, categories, items, labels, discountRules),
-    [lines, categories, items, labels, discountRules],
+    () => evaluateSale(lines, categories, items, labels, creators, discountRules),
+    [lines, categories, items, labels, creators, discountRules],
   )
 
   return { lines, evaluated, addItem, setQty, removeItem, clear }

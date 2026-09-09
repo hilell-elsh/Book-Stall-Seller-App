@@ -8,6 +8,7 @@ export function DiscountRuleManager() {
   const {
     categories,
     labels,
+    creators,
     items,
     discountRules,
     addDiscountRule,
@@ -38,6 +39,7 @@ export function DiscountRuleManager() {
         <DiscountRuleForm
           categories={categories}
           labels={labels}
+          creators={creators}
           items={items}
           initial={editing === 'new' ? undefined : editing}
           onCancel={() => setEditing(null)}

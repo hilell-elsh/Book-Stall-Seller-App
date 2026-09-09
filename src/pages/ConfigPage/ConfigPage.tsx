@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { CategoryManager } from './CategoryManager'
+import { CreatorManager } from './CreatorManager'
 import { DiscountRuleManager } from './DiscountRuleManager'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
 import { PaymentMethodManager } from './PaymentMethodManager'
 
-type Section = 'items' | 'discounts' | 'categories' | 'labels' | 'payments'
+type Section = 'items' | 'discounts' | 'categories' | 'labels' | 'payments' | 'creators'
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'items', label: 'פריטים' },
@@ -13,6 +14,7 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'categories', label: 'קטגוריות' },
   { id: 'labels', label: 'תוויות' },
   { id: 'payments', label: 'אמצעי תשלום' },
+  { id: 'creators', label: 'יוצרים' },
 ]
 
 export function ConfigPage() {
@@ -45,6 +47,7 @@ export function ConfigPage() {
         {section === 'categories' && <CategoryManager />}
         {section === 'labels' && <LabelManager />}
         {section === 'payments' && <PaymentMethodManager />}
+        {section === 'creators' && <CreatorManager />}
       </div>
     </div>
   )

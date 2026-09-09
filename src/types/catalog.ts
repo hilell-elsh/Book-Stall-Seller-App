@@ -6,6 +6,11 @@ export interface Category {
   updatedAt: string
 }
 
+export interface CreatorShare {
+  creatorId: string
+  percentage: number
+}
+
 export interface CatalogItem {
   id: string
   categoryId: string
@@ -14,6 +19,7 @@ export interface CatalogItem {
   order: number
   active: boolean
   labelIds: string[]
+  creatorShares: CreatorShare[]
   createdAt: string
   updatedAt: string
 }

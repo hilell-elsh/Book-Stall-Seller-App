@@ -8,6 +8,7 @@ export function ItemManager() {
     categories,
     items,
     labels,
+    creators,
     addItem,
     updateItem,
     deleteItem,
@@ -15,6 +16,7 @@ export function ItemManager() {
     changeItemCategory,
     toggleItemLabel,
     toggleItemActive,
+    setItemCreatorShares,
   } = useAppData()
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [newName, setNewName] = useState('')
@@ -22,6 +24,36 @@ export function ItemManager() {
   const [pendingDelete, setPendingDelete] = useState<CatalogItem | null>(null)
 
   const activeCategoryId = selectedCategoryId || categories[0]?.id || ''
+
+  function addCreatorShare(itemId: string, creatorId: string) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item || item.creatorShares.some((share) => share.creatorId === creatorId)) return
+    const usedPercent = item.creatorShares.reduce((sum, share) => sum + share.percentage, 0)
+    const remaining = Math.max(0, 100 - usedPercent)
+    setItemCreatorShares(itemId, [...item.creatorShares, { creatorId, percentage: remaining }])
+  }
+
+  function updateCreatorSharePercentage(itemId: string, creatorId: string, percentage: number) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item) return
+    setItemCreatorShares(
+      itemId,
+      item.creatorShares.map((share) =>
+        share.creatorId === creatorId ? { ...share, percentage } : share,
+      ),
+    )
+  }
+
+  function removeCreatorShare(itemId: string, creatorId: string) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item) return
+    const remaining = item.creatorShares.filter((share) => share.creatorId !== creatorId)
+    // A single remaining creator gets the whole thing — no percentage left to split.
+    setItemCreatorShares(
+      itemId,
+      remaining.length === 1 ? [{ ...remaining[0], percentage: 100 }] : remaining,
+    )
+  }
 
   function handleAdd() {
     const trimmedName = newName.trim()
@@ -189,6 +221,74 @@ export function ItemManager() {
                           </button>
                         )
                       })}
+                    </div>
+                  )}
+                  {creators.length > 0 && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <span className="text-xs text-muted">יוצרים:</span>
+                      {item.creatorShares.map((share) => {
+                        const creator = creators.find((c) => c.id === share.creatorId)
+                        if (!creator) return null
+                        const soleCreator = item.creatorShares.length === 1
+                        return (
+                          <span
+                            key={share.creatorId}
+                            className="inline-flex items-center gap-1 rounded-full border border-line-strong px-2 py-0.5 text-xs"
+                          >
+                            {creator.name}
+                            {!soleCreator && (
+                              <>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  defaultValue={share.percentage}
+                                  onBlur={(e) => {
+                                    const percentage = Number(e.target.value)
+                                    if (Number.isFinite(percentage) && percentage >= 0) {
+                                      updateCreatorSharePercentage(item.id, share.creatorId, percentage)
+                                    }
+                                  }}
+                                  className="w-14 shrink-0 rounded border border-line-strong bg-paper px-1 py-0.5 text-center text-xs"
+                                />
+                                %
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeCreatorShare(item.id, share.creatorId)}
+                              aria-label="הסר יוצר"
+                              className="text-danger-600"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        )
+                      })}
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) addCreatorShare(item.id, e.target.value)
+                        }}
+                        className="rounded-full border border-line-strong px-2 py-0.5 text-xs text-muted"
+                      >
+                        <option value="">+ הוספת יוצר</option>
+                        {creators
+                          .filter((creator) => !item.creatorShares.some((share) => share.creatorId === creator.id))
+                          .map((creator) => (
+                            <option key={creator.id} value={creator.id}>
+                              {creator.name}
+                            </option>
+                          ))}
+                      </select>
+                      {item.creatorShares.length > 0 &&
+                        item.creatorShares.reduce((sum, share) => sum + share.percentage, 0) !== 100 && (
+                          <span className="text-xs text-danger-600">
+                            (סה"כ{' '}
+                            {item.creatorShares.reduce((sum, share) => sum + share.percentage, 0)}%,
+                            צריך 100%)
+                          </span>
+                        )}
                     </div>
                   )}
                 </li>

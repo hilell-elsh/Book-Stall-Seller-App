@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Money } from '../../components/Money'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAppData } from '../../context/AppDataContext'
+import { computeCreatorPayouts } from '../../domain/payouts'
 import type { SaleRecord } from '../../types/sale'
 
 interface RecordDetailsProps {
@@ -13,6 +14,7 @@ interface RecordDetailsProps {
 export function RecordDetails({ record, onEdit, onClose }: RecordDetailsProps) {
   const { paymentMethods, deleteSaleRecord } = useAppData()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const payouts = computeCreatorPayouts(record)
 
   const paymentMethodName = record.paymentMethodId
     ? paymentMethods.find((method) => method.id === record.paymentMethodId)?.name
@@ -77,6 +79,18 @@ export function RecordDetails({ record, onEdit, onClose }: RecordDetailsProps) {
         <div className="mt-2 space-y-0.5 text-sm text-muted">
           {paymentMethodName && <p>אמצעי תשלום: {paymentMethodName}</p>}
           {record.receiver && <p>מקבל/ת: {record.receiver}</p>}
+        </div>
+      )}
+
+      {payouts.length > 0 && (
+        <div className="mt-2 space-y-1 border-t border-line pt-2">
+          <p className="text-sm text-muted">פיצול ליוצרים</p>
+          {payouts.map((payout) => (
+            <div key={payout.creatorId} className="flex justify-between text-sm">
+              <span>{payout.creatorName}</span>
+              <Money amount={payout.amount} />
+            </div>
+          ))}
         </div>
       )}
 

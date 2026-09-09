@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Category, CatalogItem } from '../../types/catalog'
+import type { Creator } from '../../types/creator'
 import type { ComboComponent, DiscountRule, DiscountRuleDraft } from '../../types/discount'
 import type { Label } from '../../types/label'
 import type { ItemSelector } from '../../types/selector'
@@ -10,6 +11,7 @@ type Kind = 'stepDiscount' | 'bundlePrice' | 'comboBundle'
 interface DiscountRuleFormProps {
   categories: Category[]
   labels: Label[]
+  creators: Creator[]
   items: CatalogItem[]
   initial?: DiscountRule
   onSave: (draft: DiscountRuleDraft) => void
@@ -24,17 +26,22 @@ interface ComponentDraft {
 function selectorIsEmpty(selector: ItemSelector): boolean {
   switch (selector.type) {
     case 'filter':
-      return selector.categoryIds.length === 0 && selector.labelIds.length === 0
+      return (
+        selector.categoryIds.length === 0 &&
+        selector.labelIds.length === 0 &&
+        selector.creatorIds.length === 0
+      )
     case 'item':
       return selector.itemIds.length === 0
   }
 }
 
-const emptySelector: ItemSelector = { type: 'filter', categoryIds: [], labelIds: [] }
+const emptySelector: ItemSelector = { type: 'filter', categoryIds: [], labelIds: [], creatorIds: [] }
 
 export function DiscountRuleForm({
   categories,
   labels,
+  creators,
   items,
   initial,
   onSave,
@@ -269,6 +276,7 @@ export function DiscountRuleForm({
               <TargetPicker
                 categories={categories}
                 labels={labels}
+                creators={creators}
                 items={items}
                 value={target}
                 onChange={setTarget}
@@ -366,6 +374,7 @@ export function DiscountRuleForm({
               <TargetPicker
                 categories={categories}
                 labels={labels}
+                creators={creators}
                 items={items}
                 value={component.target}
                 onChange={(nextTarget) => updateComponentTarget(index, nextTarget)}
@@ -420,6 +429,7 @@ export function DiscountRuleForm({
             <TargetPicker
               categories={categories}
               labels={labels}
+              creators={creators}
               items={items}
               value={triggerSelector}
               onChange={setTriggerSelector}

@@ -1,15 +1,18 @@
 import { Money } from '../../components/Money'
 import { useAppData } from '../../context/AppDataContext'
 import type { SaleRecord } from '../../types/sale'
+import { RecordEditor } from './RecordEditor'
 
 interface RecordListProps {
   records: SaleRecord[]
-  onSelect: (record: SaleRecord) => void
+  expandedId: string | null
+  onToggle: (id: string) => void
+  onCloseExpanded: () => void
 }
 
 const dateFormatter = new Intl.DateTimeFormat('he-IL', { dateStyle: 'short', timeStyle: 'short' })
 
-export function RecordList({ records, onSelect }: RecordListProps) {
+export function RecordList({ records, expandedId, onToggle, onCloseExpanded }: RecordListProps) {
   const { paymentMethods } = useAppData()
   const paymentMethodById = new Map(paymentMethods.map((method) => [method.id, method]))
   const sorted = [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -28,12 +31,13 @@ export function RecordList({ records, onSelect }: RecordListProps) {
         const details = [`${itemCount} פריטים`, paymentMethodName, record.receiver].filter(
           Boolean,
         )
+        const isExpanded = record.id === expandedId
         return (
           <li key={record.id}>
             <button
               type="button"
-              onClick={() => onSelect(record)}
-              className="flex w-full items-center justify-between p-3 text-start"
+              onClick={() => onToggle(record.id)}
+              className="flex w-full items-center justify-between p-3 text-start transition-colors hover:bg-subtle"
             >
               <div>
                 <p className="text-sm font-medium">
@@ -45,6 +49,11 @@ export function RecordList({ records, onSelect }: RecordListProps) {
                 <Money amount={record.total} />
               </span>
             </button>
+            {isExpanded && (
+              <div className="border-t border-line">
+                <RecordEditor record={record} onClose={onCloseExpanded} />
+              </div>
+            )}
           </li>
         )
       })}

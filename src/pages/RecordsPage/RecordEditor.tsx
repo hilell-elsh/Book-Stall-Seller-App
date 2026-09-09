@@ -42,24 +42,23 @@ export function RecordEditor({ record, onClose }: RecordEditorProps) {
   }
 
   return (
-    <div
-      className={`mx-auto flex min-h-full max-w-[1400px] flex-col sm:flex-row ${hasItems ? 'pb-14 sm:pb-0' : ''}`}
-    >
+    <div className={`flex flex-col sm:flex-row ${hasItems ? 'pb-14 sm:pb-0' : ''}`}>
       <div className="flex-1">
         <div className="flex items-center justify-between p-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex min-h-11 items-center rounded px-2 text-sm text-accent-600 transition-colors hover:bg-subtle"
-          >
-            → חזרה לרשימה
-          </button>
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
             className="flex min-h-11 items-center rounded border border-danger-300 px-3 text-sm text-danger-600 transition-colors hover:bg-danger-300/30"
           >
             מחיקת מכירה
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="סגירה"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded text-lg transition-colors hover:bg-subtle"
+          >
+            ✕
           </button>
         </div>
         <ItemBrowser categories={categories} items={items} labels={labels} onAdd={cart.addItem} />

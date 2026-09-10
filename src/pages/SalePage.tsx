@@ -3,7 +3,7 @@ import { CartLinesList } from '../components/cart/CartLinesList'
 import { ItemBrowser } from '../components/cart/ItemBrowser'
 import { ManualAdjustments } from '../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../components/cart/MobileCartBar'
-import { PaymentSelector } from '../components/cart/PaymentSelector'
+import { OTHER_RECEIVER, PaymentSelector } from '../components/cart/PaymentSelector'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
 import type { CartState } from '../hooks/useCartState'
@@ -16,10 +16,12 @@ export function SalePage({ cart }: SalePageProps) {
   const { categories, items, labels, creators, paymentMethods, eventName, addSaleRecord } =
     useAppData()
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [receiver, setReceiver] = useState('')
+  const [receiverSelection, setReceiverSelection] = useState('')
+  const [receiverOther, setReceiverOther] = useState('')
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
-  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
+  const receiver = receiverSelection === OTHER_RECEIVER ? receiverOther.trim() : receiverSelection
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver !== ''
   const hasItems = cart.lines.length > 0
 
   function handleSave() {
@@ -28,13 +30,14 @@ export function SalePage({ cart }: SalePageProps) {
       ...cart.evaluated,
       eventName,
       paymentMethodId,
-      receiver: receiver.trim(),
+      receiver,
       manualDiscount: cart.manualDiscount ?? undefined,
       comment: cart.comment.trim() || undefined,
     })
     cart.clear()
     setPaymentMethodId('')
-    setReceiver('')
+    setReceiverSelection('')
+    setReceiverOther('')
   }
 
   function scrollToCart() {
@@ -86,9 +89,12 @@ export function SalePage({ cart }: SalePageProps) {
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}
-          receiver={receiver}
+          creators={creators}
+          receiverSelection={receiverSelection}
+          receiverOther={receiverOther}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiver}
+          onReceiverSelectionChange={setReceiverSelection}
+          onReceiverOtherChange={setReceiverOther}
           onSubmit={handleSave}
         />
         <SaleSummary

@@ -3,7 +3,7 @@ import { CartLinesList } from '../../components/cart/CartLinesList'
 import { ItemBrowser } from '../../components/cart/ItemBrowser'
 import { ManualAdjustments } from '../../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../../components/cart/MobileCartBar'
-import { PaymentSelector } from '../../components/cart/PaymentSelector'
+import { OTHER_RECEIVER, PaymentSelector } from '../../components/cart/PaymentSelector'
 import { SaleSummary } from '../../components/cart/SaleSummary'
 import { useAppData } from '../../context/AppDataContext'
 import { useCartState } from '../../hooks/useCartState'
@@ -23,10 +23,18 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
     record.comment ?? '',
   )
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
-  const [receiver, setReceiver] = useState(record.receiver ?? '')
+  const initialReceiver = record.receiver ?? ''
+  const initialReceiverMatchesCreator = creators.some((creator) => creator.name === initialReceiver)
+  const [receiverSelection, setReceiverSelection] = useState(
+    initialReceiver === '' ? '' : initialReceiverMatchesCreator ? initialReceiver : OTHER_RECEIVER,
+  )
+  const [receiverOther, setReceiverOther] = useState(
+    initialReceiver !== '' && !initialReceiverMatchesCreator ? initialReceiver : '',
+  )
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
-  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
+  const receiver = receiverSelection === OTHER_RECEIVER ? receiverOther.trim() : receiverSelection
+  const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver !== ''
   const hasItems = cart.lines.length > 0
 
   function handleSave() {
@@ -35,7 +43,7 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
       ...cart.evaluated,
       eventName,
       paymentMethodId,
-      receiver: receiver.trim(),
+      receiver,
       manualDiscount: cart.manualDiscount ?? undefined,
       comment: cart.comment.trim() || undefined,
     })
@@ -87,9 +95,12 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}
-          receiver={receiver}
+          creators={creators}
+          receiverSelection={receiverSelection}
+          receiverOther={receiverOther}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiver}
+          onReceiverSelectionChange={setReceiverSelection}
+          onReceiverOtherChange={setReceiverOther}
           onSubmit={handleSave}
         />
         <SaleSummary

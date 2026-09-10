@@ -1,20 +1,29 @@
+import type { Creator } from '../../types/creator'
 import type { PaymentMethod } from '../../types/paymentMethod'
+
+export const OTHER_RECEIVER = '__other__'
 
 interface PaymentSelectorProps {
   paymentMethods: PaymentMethod[]
   paymentMethodId: string
-  receiver: string
+  creators: Creator[]
+  receiverSelection: string
+  receiverOther: string
   onPaymentMethodChange: (id: string) => void
-  onReceiverChange: (name: string) => void
+  onReceiverSelectionChange: (value: string) => void
+  onReceiverOtherChange: (value: string) => void
   onSubmit?: () => void
 }
 
 export function PaymentSelector({
   paymentMethods,
   paymentMethodId,
-  receiver,
+  creators,
+  receiverSelection,
+  receiverOther,
   onPaymentMethodChange,
-  onReceiverChange,
+  onReceiverSelectionChange,
+  onReceiverOtherChange,
   onSubmit,
 }: PaymentSelectorProps) {
   if (paymentMethods.length === 0) {
@@ -44,19 +53,34 @@ export function PaymentSelector({
       </div>
       <div>
         <label className="block text-sm text-muted">מקבל/ת התשלום</label>
-        <input
-          type="text"
-          value={receiver}
-          onChange={(e) => onReceiverChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              onSubmit?.()
-            }
-          }}
-          placeholder="שם מי שקיבל/ה את התשלום"
+        <select
+          value={receiverSelection}
+          onChange={(e) => onReceiverSelectionChange(e.target.value)}
           className="mt-1 w-full rounded border border-line-strong px-2 py-2 text-sm"
-        />
+        >
+          <option value="">בחירה...</option>
+          {creators.map((creator) => (
+            <option key={creator.id} value={creator.name}>
+              {creator.name}
+            </option>
+          ))}
+          <option value={OTHER_RECEIVER}>אחר...</option>
+        </select>
+        {receiverSelection === OTHER_RECEIVER && (
+          <input
+            type="text"
+            value={receiverOther}
+            onChange={(e) => onReceiverOtherChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                onSubmit?.()
+              }
+            }}
+            placeholder="שם מי שקיבל/ה את התשלום"
+            className="mt-2 w-full rounded border border-line-strong px-2 py-2 text-sm"
+          />
+        )}
       </div>
     </div>
   )

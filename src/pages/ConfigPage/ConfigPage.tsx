@@ -6,6 +6,7 @@ import { EventSettings } from './EventSettings'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
 import { PaymentMethodManager } from './PaymentMethodManager'
+import { SyncDebugPanel } from './SyncDebugPanel'
 
 type Section = 'items' | 'discounts' | 'categories' | 'labels' | 'payments' | 'creators'
 
@@ -25,8 +26,9 @@ export function ConfigPage() {
     <div className="mx-auto max-w-2xl p-4 pb-8">
       <h1 className="text-lg font-semibold">הגדרות</h1>
 
-      <div className="mt-3">
+      <div className="mt-3 space-y-3">
         <EventSettings />
+        <SyncDebugPanel />
       </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">

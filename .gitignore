@@ -16,6 +16,9 @@ dist-offline-demo
 *.html
 !index.html
 *.local
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

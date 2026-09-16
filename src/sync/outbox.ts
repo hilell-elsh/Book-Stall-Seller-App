@@ -1,6 +1,7 @@
 import { getSyncOutbox, saveSyncOutbox } from '../data/store'
 import { getDeviceId } from './deviceId'
 import { drainOutbox } from './drain'
+import { notifySyncOutboxChanged } from './syncStatus'
 
 export interface OutboxOp {
   opId: string
@@ -72,6 +73,7 @@ export function enqueue<T extends { id: string }>(entity: string, prev: T[], nex
   const ops = diffToOps(entity, prev, next, getDeviceId(), new Date().toISOString())
   if (ops.length === 0) return
   saveSyncOutbox([...getSyncOutbox(), ...ops])
+  notifySyncOutboxChanged()
   void drainOutbox()
 }
 
@@ -90,5 +92,6 @@ export function enqueueSingleton<T>(entity: string, entityId: string, prev: T, n
     attempts: 0,
   }
   saveSyncOutbox([...getSyncOutbox(), op])
+  notifySyncOutboxChanged()
   void drainOutbox()
 }

@@ -2,6 +2,7 @@ import { deleteDoc, doc, setDoc } from 'firebase/firestore'
 import { getSyncOutbox, saveSyncOutbox } from '../data/store'
 import { getDb, isSyncConfigured } from './firebaseConfig'
 import type { OutboxOp } from './outbox'
+import { notifySyncOutboxChanged, recordSyncSuccess, setDraining } from './syncStatus'
 
 // Firestore's own SDK already retries transient network failures on its own
 // (offline persistence + automatic reconnect) — per the Phase 2 plan, this
@@ -45,21 +46,30 @@ async function applyOp(op: OutboxOp): Promise<void> {
 // retries them — no data is dropped, only deferred.
 export async function drainOutbox(): Promise<void> {
   if (!isSyncConfigured || draining) return
+  const ops = getSyncOutbox()
+  if (ops.length === 0) return
   draining = true
+  setDraining(true)
   try {
-    const ops = getSyncOutbox()
-    if (ops.length === 0) return
     const remaining: OutboxOp[] = []
+    let succeeded = false
     for (const op of ops) {
       try {
         await applyOp(op)
+        succeeded = true
       } catch (err) {
         remaining.push({ ...op, attempts: op.attempts + 1, lastError: (err as Error).message })
       }
     }
     saveSyncOutbox(remaining)
+    // recordSyncSuccess already notifies; only call the plain notify when
+    // nothing succeeded, so a fully-failed pass still surfaces its new
+    // pendingCount/stuckOps without touching lastSyncedAt.
+    if (succeeded) recordSyncSuccess(new Date().toISOString())
+    else notifySyncOutboxChanged()
   } finally {
     draining = false
+    setDraining(false)
   }
 }
 

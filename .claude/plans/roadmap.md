@@ -1,0 +1,183 @@
+# Book Stall App — Long-range roadmap (Phase 2–5)
+
+## Context
+
+Phase 1 (local-only, single-device, `localStorage`-backed) is complete and in daily use at the stall (see `/Users/hilele/.claude/plans/i-want-to-create-fluttering-emerson.md` for its full Task 0–9 build history — kept outside this repo, not duplicated here). That doc's own "Phase 2/3 backlog" section flagged two things for a future dedicated planning session — cloud sync and user accounts — without designing either. This doc is that session, and goes further: the user laid out a full long-range shape spanning four more phases (sync → access control → multi-stall → productionization), with the explicit constraint that the *gaps between phases* stay production-usable, since each phase may ship long before the next one starts. This doc supersedes the old Phase 2/3 backlog section (updated to point here) and renumbers things slightly: the old doc's single "Phase 3: user management" idea is split into **Phase 3 (single-stall roles)** and **Phase 4 (multi-stall + real auth)**.
+
+Phase 2 is designed here in implementation-ready detail: architecture, a real backend/DB discussion with tradeoffs, sync-timing tradeoffs with a concrete conflict example, and a numbered task breakdown (mirroring the Task 0–9 format, now with a testing task at the start of every phase). Phases 3–5 stay roadmap-level: enough to keep Phase 2 from painting itself into a corner, deliberately not designed further — each gets its own dedicated planning session when it's about to start, same discipline as the original plan.
+
+## Cross-cutting principles (apply to every phase from here on)
+
+1. **Always-shippable.** Each phase's increment must leave the app fully usable for daily stall operation on its own — no partial states where the app depends on a not-yet-built later phase to make sense. This is the user's explicit constraint: the gap between phases will be lived in.
+2. **Backward-compatible data evolution.** Keep extending the existing `store.ts` per-field `?? default` convention (documented in CLAUDE.md's "Adding a new persisted field") for every new field/entity across all future phases — never a breaking migration that requires every device to upgrade in lockstep.
+3. **Offline-first is non-negotiable from Phase 2 onward.** A stall with no wifi must keep selling. Sync/auth/multi-tenancy are additive layers, never blocking.
+4. **Progressive, opt-in complexity.** A solo single-stall user should never be forced through multi-user login (Phase 3) or multi-stall admin (Phase 4) setup they don't need. Concretely: no roles configured ⇒ behaves like Phase 1/2 (everyone can do everything); one stall ⇒ no stall-switcher UI in sight.
+5. **Test-first per phase (new).** The repo currently has zero test framework. Starting with Phase 2, every phase's **first** task is dedicated to establishing/extending a test suite for that phase's own work — not a one-off setup step, but something every later task in the phase adds to as it's built.
+
+---
+
+## Phase 2 — Shared sync (data layer)
+
+**Goal** (user's framing): sync shared configs and records to a shared DB, offline-first with background sync when online, with a shared/private data split.
+
+### Grounded starting point
+
+- 8 persisted keys in `src/data/store.ts` (all under the `shaatnez:v1:` prefix, never bumped since creation), each a whole-array/scalar `getX`/`saveX` pair: `categories`, `items`, `discountRules`, `labels`, `paymentMethods`, `creators`, `saleRecords`, `eventName`.
+- Two distinct entity shapes: **config tables** (categories/items/discountRules/labels/paymentMethods/creators — normalized, mutable, reference-driven by id) vs. **`saleRecords`** (the one write-once/append-mostly, self-contained snapshot entity — `SaleLineItem`/`LineCreatorShare`/`AppliedDiscount` all snapshot names/prices/percentages at sale time so historical records don't drift when the catalog changes later).
+- `src/context/AppDataContext.tsx` funnels every mutation through a uniform `persistX(next)` helper (`setState` + `store.saveX`, always together) — a clean seam a sync layer can wrap without touching any page/component.
+- Currently **zero** offline/PWA infra (no service worker, manifest, IndexedDB), **zero** device/session/user identity, no HTTP client or cloud SDK, no test framework, no state/query library. Greenfield for sync in every dimension except the `persistX` seam.
+- One pre-existing gap sync will make worse: `SaleRecord.paymentMethodId` is a **live reference** (resolved by `.find()` at render time in `RecordList.tsx`/`RecordDetails.tsx`/`reports.ts`), unlike every other referenced-and-mutable field on a sale record, which is already snapshotted. Today, deleting a payment method only corrupts history on the one device that did it; post-sync, that corruption would propagate to every device's historical reports. Folded into the task list below.
+
+### Backend/DB choice — options, tradeoffs, and a recommendation (discussion, final pick still yours)
+
+Four realistic options, plus why Google Sheets is ruled out now that the requirements are concrete:
+
+**A — Firebase / Firestore** (managed NoSQL, Google)
+- **Pros**: the client SDK ships with built-in offline persistence and a write queue already — a real chance to replace much of this doc's hand-built outbox/sync-engine (Tasks 13–15 below) with configuration instead of code. Realtime listeners. Generous free tier. Nothing to host/run yourself. Its Security Rules DSL can express Phase 3 (admin/seller) and Phase 4 (`stallId`-scoped) access directly at the DB layer.
+- **Cons**: proprietary NoSQL document model — fine for this app's simple shape, more awkward for future SQL-style reporting. Vendor lock-in to Google. No self-host option at all, which sits awkwardly against your own "run it as a real application server" plan for after Phase 4 — picking Firestore means staying on it indefinitely or migrating off later.
+
+**B — Supabase** (managed Postgres, open-source)
+- **Pros**: real relational SQL — a better fit if cross-stall reporting/analytics ever matters, and conceptually closer to "we'll run this ourselves eventually" since Postgres is portable and Supabase itself is open-source and self-hostable. Row Level Security (RLS) policies map very naturally onto Phase 3's admin/seller split and Phase 4's `stallId` tenant isolation — arguably the best structural fit for the access-control phases specifically. Realtime subscriptions available. Cost roughly comparable to Firestore at this scale.
+- **Cons**: the client SDK does **not** include Firestore's automatic offline persistence/write-queue — this doc's hand-built outbox/backoff/conflict-merge design (Tasks 13–15) stays necessary regardless of choosing this.
+
+**C — a private DB you rent + a custom API you write** (e.g. managed Postgres on Railway/Render/Neon/RDS + a small Node/serverless API layer) — the option you flagged as "equal price too"
+- **Pros**: full control, no BaaS vendor at all — this *is* the "real application server" you described wanting after Phase 4, just started now instead of migrated to later. No proprietary client SDK, no lock-in.
+- **Cons**: you now own building the API server itself, its auth checks, its own equivalent of Firestore Security Rules / Supabase RLS (hand-rolled authorization), hosting/ops for that server — and it pulls forward real chunks of your stated Phase 5 (basic CI to build/deploy it, at least minimal error logging) much earlier than "after Phase 4," since a live server needs baseline operability from day one just to exist reliably. Meaningfully more work across every Phase 2 task, not just the DB pick.
+
+**D — PocketBase** (self-hosted, single binary, SQLite-based BaaS) — worth naming as a dark horse
+- **Pros**: bundles realtime, auth, an admin UI, and file storage into one small self-hosted binary (e.g. a $5/mo VPS) — close to option C's "we run it ourselves" spirit, but with auth/admin UI/realtime already built instead of hand-rolled.
+- **Cons**: smaller ecosystem than Firebase/Supabase, no built-in offline client sync (same outbox work as option B), less battle-tested at scale.
+
+**Google Sheets** (the originally-floated idea) — ruled out now that sync/offline/RBAC requirements are concrete: no real offline story, fragile/slow under frequent writes, no query layer for later reporting, awkward to secure per-role or per-tenant. It stays useful only as an export target — already covered by the app's existing CSV export, so there's no real gap here.
+
+**Decided: Firestore (option A).** Supabase was my structural-fit recommendation, but the user's priority is explicit: simplest to build now, migrate later if needed. Firestore is the simplest of the four — nothing to host/run/monitor yourself, and its client SDK's built-in offline persistence and write queue absorb most of what Tasks 13–15 below would otherwise hand-build. The tradeoffs noted above (NoSQL, no self-host, Google lock-in) are accepted as the price of that simplicity, with an explicit plan to migrate later (to Supabase/Postgres or a custom server) if/when Phase 4's multi-tenant needs or Phase 5's "run it ourselves" ambition make that worthwhile. Migrating later is more work than picking the "right" backend now, but it's real and available — every entity already has a stable `id`/`updatedAt` shape that isn't Firestore-specific, so a future migration is an export/import job, not a redesign.
+
+**Consequence for the task list**: Tasks 13–15 below shrink substantially — lean on Firestore's SDK offline cache and its own merge behavior rather than hand-building a full custom outbox/sync engine from scratch. Still worth building the thin `src/sync/backend.ts` adapter seam (so a later migration doesn't mean ripping out every call site), but the bulk of the custom logic in the original design is now optional/deferred unless Firestore's defaults prove insufficient in practice.
+
+### Shared vs. private split
+
+- **Shared (synced) = all 8 existing keys, unchanged in kind.** Config tables sync as mutable rows (last-write-wins); `saleRecords` syncs as append-mostly; `eventName` becomes a shared scalar that needs its own `updatedAt` for the first time.
+- **Private (device-local only, never synced) = sync-operational metadata, plus two new user-facing concepts below**: a generated-once `deviceId`, a shared **stall PIN** entered once per device (see "access gate" below), the outbox/queue itself, last-synced cursor, retry/backoff state, connectivity/sync-status UI state, and now also **`ShiftSeller`** (see next).
+
+**On "naming the seller on shift, attached to the record" — resolved per your clarification.** In Phase 2, a shift change is expected to also be a *device* change: each seller can work from their own laptop/phone rather than everyone rotating through one shared stall device. That's materially different from Task 5's rejected `recordedBy`, where the actual problem was several sellers sharing *one* device within a shift — a sticky per-device name couldn't reflect who was really handling the till moment to moment. Once device ≈ person for the duration of a shift, a private, per-device "who's on shift here" setting is well-founded, and — critically, per your point — **the current seller on shift is not necessarily the receiver of any given sale**: whoever is *ringing up* the sale (the shift seller) isn't necessarily who the *payment lands with*, since payment apps (Bit/PayBox/etc.) deposit into one specific person's account regardless of who's operating the device — that money could go to any of the creators, or to someone else entirely, independent of who's on shift. (This is the same reasoning the original Task 6 requirements already captured: "a Bit/PayBox payment lands in a specific person's account.") So `ShiftSeller` stays strictly a *default*, never a substitute for the existing per-sale `receiver` confirmation. (Note: `ShiftSeller` covers *who* is on shift, not *when* a shift starts/ends or shift-level reporting — that's the original "shift" backlog idea, deliberately dropped from this roadmap for now; see "Resolved" below.)
+
+- New private entity: **`ShiftSeller`** — local-only, `{ creatorId, setAt }`, picked from the same `Creator` list `receiver` already uses (not a new managed list, no new type family). A small control (near the Sale page's payment/receiver section) lets whoever's holding this device set or clear it.
+- `receiver` initializes to the current `ShiftSeller` on each new sale but stays fully editable per sale — Task 6's "must explicitly confirm before saving" behavior is unchanged, only the starting value changes.
+- Never enters the outbox, never syncs — same bucket as `deviceId`, purely local device state.
+
+**Access gate**: a shared stall PIN, entered once per device and stored locally (never synced, same bucket as `deviceId`/`ShiftSeller`), gates a device's read/write access to the stall's Firestore data — see "Resolved" at the end of this section for why and how minimal this stays.
+
+### Offline-first mechanism, and how literal "background" should be (discussion)
+
+Core mechanism (kept vendor-agnostic in shape, though Firestore's SDK absorbs much of it in practice — see "Consequence for the task list" above):
+
+- **`src/sync/outbox.ts`**: a new persisted key (`syncOutbox`) of pending `{ opId, entity, entityId, op, payload, deviceId, clientTimestamp, attempts, lastError? }` records, populated by diffing prev/next inside each `persistX` call — one new line per existing CRUD path.
+- **`src/sync/syncEngine.ts`**: drains the outbox on load, on the browser `online` event, and on a foreground interval while the tab is open. Exponential backoff + jitter per failing op; never silently drops an entry; surfaces stuck entries as a visible "sync problem" instead of failing invisibly. Treats actual request failure as the offline signal, not just `navigator.onLine` (unreliable — wifi-connected-but-no-internet).
+- **`src/sync/backend.ts`**: a small adapter (`pushChanges`/`pullChanges`) — the seam that keeps the DB choice above swappable.
+- Idempotency comes free: every entity already has a stable `id`, so retried pushes are safe upserts.
+- Minimal always-visible sync status UI: online/offline, pending-change count, last-synced-at, manual "sync now."
+
+**Foreground-only sync (drain on load / `online` event / while-tab-open interval) — recommended for Phase 2:**
+- *Pros*: zero new platform dependencies — no service worker, no installable-PWA manifest, no storage migration; works today; sidesteps iOS Safari's notoriously limited/flaky Background Sync API entirely; simplest to build, debug, and reason about; ships fastest.
+- *Cons*: if a device goes offline and its tab/app is closed before reconnecting, its queued changes wait (not lost, just unsent) until it's reopened with connectivity; other devices won't see that device's changes until then.
+- *Why this likely fits here*: a POS only produces new data while someone has the app open recording a sale — there's no background process generating changes independent of an open session. The real gap is "how fresh is everyone else's view of a closed device," not "will anything be lost."
+- **Decided: foreground-only sync for Phase 2.** No service worker, no installable-PWA manifest, no IndexedDB migration. Revisit true background sync only if real friction shows up in practice.
+
+**True background sync (Service Worker + Background Sync/Periodic Sync API + IndexedDB):**
+- *Pros*: propagates a device's changes to everyone else even while its app is fully closed; tightens cross-device freshness; the same underlying tech an installable PWA needs later (useful if hardware-adjacent work — barcode scanners, receipt printers — ever happens).
+- *Cons*: real engineering lift (service-worker lifecycle/versioning bugs are notorious); inconsistent/partial browser support, especially iOS Safari. **And this is where the storage question you asked about comes in, plainly**: it isn't a separate decision — it's a hard consequence of this one. Browsers do not let a Service Worker read or write `localStorage` at all (a tab-only API by design). So choosing true background sync *forces* moving at least the sync outbox — and, for consistency, realistically all 8 existing keys — from `localStorage` to `IndexedDB`, a materially bigger and riskier migration than anything else in this phase. Not needed now that foreground-only is decided.
+
+### Conflict resolution, with a concrete example
+
+- **Config tables + `eventName`**: last-write-wins by `updatedAt`, whole-row granularity (matches the existing whole-row storage shape). Risk: two offline devices editing *different fields* of the *same row* will have the later sync silently discard the earlier edit.
+
+  **Concrete example**: Dana, offline on her phone, renames an item from "אוסף — יולי" to "אוסף — קיץ". At the same time, Noa, offline on the stall laptop, drops that same item's price from ₪42 to ₪38 for an end-of-day discount. Neither can see the other's change. When wifi returns, both devices push. Say Noa's laptop reconnects first and Dana's phone a few minutes later — Dana's full row (new name, but price still ₪42, since that's what her phone had) lands last and overwrites Noa's row entirely, silently reverting the price to ₪42. No error appears anywhere; Noa only finds out if she happens to notice the wrong price later. The real fix (tracking `updatedAt` per field, or a proper CRDT) is meaningfully more engineering than whole-row LWW, which is why this is flagged as your call rather than solved by default. In practice: config edits like this are relatively infrequent compared to sale-record additions (which use the safe append path below), so the exposure window is probably small. **Confirmed acceptable**: settings/config edits happen infrequently at this stall, so whole-row LWW is fine as designed — no field-level merge/CRDT work needed.
+
+- **Deletes**: soft-delete via a new `deletedAt` tombstone (same optional-field-default convention), not hard removal, so a pulled delete doesn't leave another device's concurrent edit pointing at a vanished id. Existing cascades (category-delete → items, label-delete → unlink) need to run against tombstones arriving via sync too, not just local mutations.
+- **Sale records**: pure append + id-based dedup for new records — the genuinely easy, append-only case. Edits via `RecordEditor` follow the config-table LWW rule above.
+- **Rule-target resolution**: `DiscountRule` targets resolve live against the catalog and are never snapshotted — once catalog edits can arrive mid-session from another device, a rule referencing a tombstoned id must degrade to "no match," not throw. Single-device Phase 1 could never race this; sync makes it possible.
+
+### Fit into the existing seam
+
+- All new code lives in a new `src/sync/` module — nothing in `domain/`, `pages/`, or `components/` changes.
+- `store.ts` extensions stay in the existing idiom (new optional fields defaulted on read, same as `labelIds ?? []` today).
+- `AppDataContext.tsx`: each `persistX(next)` gains one line calling `sync.enqueue(...)` — uniform across all ~25 CRUD functions.
+- **The one genuinely new integration point**: today `persistX` only flows app → store (local write). Sync also needs a remote → app path (merged remote changes flowing back into React state) that doesn't exist in any form yet — `AppDataContext` needs to accept merged results from `syncEngine` (e.g. a callback registered at provider-mount) and apply them via the same `setState` + `store.saveX` pattern.
+- CLAUDE.md's "Adding a new persisted field" section gets a 4th line once this lands: new *entities* need outbox wiring in their `persistX` helper; individual fields don't need per-field sync config, since resolution is row-granular by default.
+
+### Explicit scope boundary (seam for Phase 3/4, not built now)
+
+- `deviceId` is sync bookkeeping only, never a user identity — no login, no per-device write restrictions. `ShiftSeller` is a local default, not auth either. Every device gets full read/write to all shared data in Phase 2; Phase 3 decides who can write what, and could reasonably let `receiver`'s default flow from a real logged-in identity instead of `ShiftSeller` once accounts exist — that's Phase 3's call, not pre-built now.
+- No tenant/stall partitioning in Phase 2 — one shared dataset per backend project. Phase 4 will need a `stallId` on every shared entity; the only Phase-2-relevant consequence is weighing "how hard would adding a partition key later be" as part of the DB choice above, not building partitioning now.
+
+### Phase 2 task breakdown
+
+*(continuing the branch-per-task, user-checks-in-between style from Tasks 0–9; Task 10 is the new "write tests first" task per cross-cutting principle 5)*
+
+- **Task 10 — `feature/phase2-test-setup`**: introduce a test framework (Vitest — Vite-native, minimal config) and write tests for this phase's core logic ahead of/alongside implementation: outbox diff-to-ops, the LWW merge decision, tombstone cascade resolution, rule-target degrade-on-missing-id behavior, `ShiftSeller`-defaults-`receiver` logic. **Verify**: a new `npm run test` script runs; the initial suite exists (some tests red against not-yet-built code is fine) before Task 11 starts.
+- **Task 11 — `feature/sync-foundations`**: stand up Firestore, its schema mirroring the 8 shared entities (`id`/`updatedAt`/`deletedAt?` on each); add `src/sync/backend.ts` (a thin adapter wrapping the Firestore SDK — kept thin specifically so a later migration doesn't mean ripping out every call site) and `src/sync/deviceId.ts`; add the shared-PIN access gate (a one-time-per-device PIN prompt, stored locally, checked via Firebase Anonymous Auth + a Security Rule or a small Cloud Function — exact mechanism decided during this task). **Verify**: a one-off manual "push all local data" debug action uploads existing `localStorage` data; confirm it lands correctly in the Firestore console; confirm a device without the correct PIN is denied read/write; Task 10's relevant tests go green.
+- **Task 12 — `feature/outbox`**: `src/sync/outbox.ts`, wired into every `persistX` helper; queue persisted locally; no network yet. **Verify**: exercise every CRUD entity; confirm the outbox accumulates exactly one correct entry per changed/added/removed row; outbox-diff tests from Task 10 pass.
+- **Task 13 — `feature/sync-push`** *(shrunk: Firestore's SDK handles most of the offline write-queue/retry behavior itself — this task is mostly wiring `outbox` entries through the SDK and confirming its defaults are good enough, not hand-building backoff/retry from scratch)*: drain loop (load / `online` event / foreground interval), confirm Firestore's own retry behavior, add stuck-entry surfacing only if its defaults prove insufficient. **Verify**: airplane-mode test — change several entities offline, reconnect, confirm zero-loss drain; kill the app mid-sync, confirm resumption without duplication.
+- **Task 14 — `feature/sync-pull-and-merge`** *(shrunk similarly — Firestore's snapshot listeners handle much of the pull side)*: conflict resolution (LWW-by-`updatedAt` for config/`eventName`, tombstoned deletes, append+dedup for sale records) + the new inbound path into `AppDataContext`. **Verify**: two-device test — edit the same item's price on both while offline, reconnect both, confirm identical deterministic convergence; delete on one, confirm the other doesn't crash on the tombstoned id; merge-decision tests from Task 10 pass.
+- **Task 15 — `feature/sync-status-ui`**: online/offline indicator, pending-change count, last-synced-at, manual "sync now," stuck-entry warning. **Verify**: walk all states on a real device.
+- **Task 16 — `feature/tombstones-and-cascades`**: extend cascade/unlink logic to handle sync-delivered tombstones; harden rule-target resolution against missing/tombstoned ids (no-match, not crash); snapshot `paymentMethodName` onto `SaleRecord` to close the dangling-reference gap. **Verify**: reproduce each cascade/delete case across two synced devices; confirm historical reports keep correct payment-method names even after later deletion elsewhere.
+- **Task 17 — `feature/shift-seller-and-receiver-default`**: the private `ShiftSeller` setting + wiring `receiver`'s default value to it, per the design above. **Verify**: set a shift seller on one device, confirm new sales on that device default `receiver` to it while staying editable and still required before save; confirm `ShiftSeller` never appears in the outbox or on the synced backend.
+- **Task 18 — `feature/offline-resilience-hardening`**: full-offline-day soak test, large-batch push behavior, `localStorage` size sanity check, resolve the foreground-vs-true-background question in practice if it's come up. **Verify**: simulate a full offline day, sync, confirm zero data loss and identical final state everywhere.
+
+### Resolved this round
+
+- **Backend**: Firestore, for simplicity now, with an explicit migrate-later escape hatch (adapter kept thin on purpose).
+- **Sync timing**: foreground-only, no PWA/service-worker/IndexedDB work.
+- **Conflict-resolution risk**: whole-row LWW accepted as-is — config edits are infrequent enough that field-level merge isn't worth building.
+- **`ShiftSeller` vs `receiver`**: confirmed as default-only, never a substitute — payment can land with any creator (or someone else) via a payment app, independent of who's physically on shift.
+
+### Resolved: the two remaining candidates
+
+1. **Device access to a stall's shared data in Phase 2 — decided: add a lightweight PIN gate.** A shared stall PIN/passcode, entered once per device and stored locally (private, same bucket as `deviceId` — never synced), gates read/write to the stall's Firestore data so a stray device or leaked link can't write to it during the (possibly long) gap before Phase 3's real per-person auth exists. Exact mechanism (e.g. Firebase Anonymous Auth plus a Security Rule checking the PIN, or a small Cloud Function exchanging the PIN for a custom token) is an implementation detail for Task 11, not designed further here — kept intentionally minimal, since this is a stopgap, not Phase 3's real access control.
+2. **The original "shift" backlog item, as a trackable time period — decided: not now.** Separate from `ShiftSeller` (which only tracks *who*, not *when*) — a shift having a start/end time, a name, or shift-level reporting ("how much did the Tuesday-morning shift sell") is dropped from this roadmap for now. Kept as a known possible future feature, not scheduled into any phase above.
+
+---
+
+## Phase 3 — Access control (single stall)
+
+**Goal** (user's framing): admins can change stall settings; sellers can only record sales.
+
+- Its own Task 0 (per cross-cutting principle 5) extends the Phase 2 test suite before any Phase 3 feature work starts — not detailed further here, just flagged as the required first task when this phase's session happens.
+- Builds on whatever identity primitive Phase 2 leaves as a seam (`deviceId` is sync-only; `ShiftSeller` is a local default, neither is auth) — this is where a real login/session concept is introduced for the first time. Once real accounts exist, `receiver`'s default could reasonably switch from `ShiftSeller` to "the logged-in seller" — Phase 3's call, not pre-built now.
+- Two roles minimum: **admin** (catalog, discount rules, payment methods, creators, event name) vs **seller** (record/edit sales only). Finer granularity undesigned — decide at that phase's own session.
+- Per cross-cutting principle 4: **no roles configured ⇒ everyone is admin**, matching today's no-login behavior, so a solo user is never walled off by a feature they didn't ask for.
+- Scoped to a single stall — permissions apply to "the one dataset this deployment syncs" (Phase 2's backend project). Avoid building anything that assumes exactly one stall will ever exist, but no stall-switching UI needed yet — that's Phase 4.
+- Not designed further here: auth provider/method, session/token mechanics, exact permission matrix. Phase 2's Firestore choice means Firebase Auth + Security Rules are the natural foundation here (extending the Phase 2 PIN gate into real per-person accounts) — worth revisiting at that phase's own kickoff, including whether Firestore still fits or a migration is worth pulling forward.
+
+## Phase 4 — Multi-stall
+
+**Goal** (user's framing): one user can belong to multiple stalls; a superadmin sees across all stalls; real auth methods.
+
+- Own Task 0 (test suite extension) as the first task, same as every phase from here on.
+- Structurally the biggest change since Phase 1: introduces `stallId` as a partition key on every shared entity, turning "stall" into a first-class tenant boundary rather than an assumed-singular dataset — exactly the seam the Phase 2 DB choice was asked to keep viable.
+- Auth methods (email/password, magic link, OAuth, etc.) — open, decide at that phase's session; almost certainly extends whatever account primitive Phase 3 introduces (single-stall accounts → multi-stall membership records) rather than replacing it.
+- Superadmin scope — what they can actually *do* with cross-stall visibility (view only? aggregate reports? impersonate a stall's session?) is explicitly undesigned; narrow it down at that phase's own session.
+- Not designed further here.
+
+## Phase 5 — Productionization (user's stated direction)
+
+**Goal** (user's framing): once Phase 4's multi-stall/superadmin/auth exists, run the UI and backend as a real, operated application — CI/CD, monitoring, logging, "everything a real product has."
+
+Likely covers, once its own session designs it properly:
+- **CI**: automated typecheck/lint/test (built on the Vitest suite every phase's Task 0 has been extending since Phase 2) + build on every push/PR — GitHub Actions is the natural fit given the repo's already on GitHub.
+- **CD**: automated deploy on merge — frontend to Vercel/Netlify/Cloudflare Pages or similar; backend deploy shape depends entirely on the Phase 2 DB choice (a managed BaaS like Supabase/Firestore needs far less "server" to deploy/monitor than option C/D's custom server).
+- **Monitoring**: uptime checks, error tracking (e.g. Sentry), basic health/usage dashboards.
+- **Logging**: structured, centralized logs for whatever server-side code exists by then (not just browser console).
+- Also likely, undesigned: staging vs. production environments, DB backup/disaster-recovery, secrets management, rollback strategy.
+
+**Sequencing note**: now that Phase 2 has landed on Firestore (a managed BaaS, not a custom server), there's no custom server to operate early, so deferring full CI/CD/monitoring/logging to Phase 5 stays clean, with nothing left unmonitored in the gap. (This would have been a real tension if Phase 2 had landed on the custom-server option instead — worth remembering if a future migration ever moves off Firestore before Phase 5 happens.)
+
+**Not lost, just demoted**: earlier-floated feature-direction ideas — barcode/ISBN scanning, receipt printing, card-terminal integration, cross-stall analytics, inventory/transfers — are still plausible candidates for a **Phase 6+** once productionization is done, since they're about *doing more* with the product rather than *operating* it properly. Noted here so they aren't forgotten, not designed further.
+
+---
+
+## Next step / how this doc gets used
+
+- Phase 2 is the only phase detailed enough to start executing task-by-task; Phases 3–5 stay intentionally high-level per the cross-cutting principles, each getting its own dedicated planning session when it's about to start.
+- Verification for Phase 2 is per-task, listed inline above; verification for Phases 3–5 is "hold that phase's own planning session before writing code."
+- Phase 2 Task 11 is blocked on nothing further — the backend-vendor decision is made (Firestore). Task 10 (test setup) is the concrete starting point whenever implementation begins.

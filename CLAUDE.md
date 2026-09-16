@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 "דוכן הספרים" (the book stand) — a point-of-sale app for a book fair / seller stand: browse a catalog, build a cart, apply discount rules, record sales, and export reports. Hebrew UI, RTL layout (`index.html` sets `lang="he" dir="rtl"`). No backend — all data lives in the browser's `localStorage`.
 
+## Plan doc
+
+`.claude/plans/roadmap.md` is the long-range roadmap (Phase 2 cloud sync, designed in implementation-ready task-by-task detail; Phases 3–5 — access control, multi-stall, productionization — roadmap-level only, each gets its own dedicated planning session before implementation starts). Check it before starting any Phase 2+ work, and keep its "Execution status" note at the end current as tasks land.
+
 ## Commands
 
 - `npm run dev` — start the Vite dev server.

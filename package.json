@@ -9,7 +9,8 @@
     "build:offline": "tsc -b && vite build --config vite.config.offline.ts",
     "build:offline:demo": "tsc -b && VITE_SEED_DEMO=true vite build --config vite.config.offline.ts --outDir dist-offline-demo",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -25,6 +26,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
-    "vite-plugin-singlefile": "^2.3.3"
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.1"
   }
 }

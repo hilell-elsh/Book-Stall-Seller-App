@@ -38,10 +38,21 @@ function ensureInitialized(): void {
   app = initializeApp(config)
   // Firestore's own offline write-queue/cache is the mechanism the Phase 2
   // plan leans on instead of hand-building one; multi-tab manager keeps it
-  // consistent if the stall ever has two tabs open on one device.
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-  })
+  // consistent if the stall ever has two tabs open on one device. But
+  // persistentLocalCache needs IndexedDB, which throws synchronously on some
+  // mobile browsers under an opaque file:// origin (offline single-file
+  // builds opened directly from disk) — per "sync is additive, never
+  // blocking" above, that has to degrade to a non-persistent Firestore
+  // instance (still works over the network, just no offline queueing/
+  // multi-tab coordination), not crash the whole app.
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch (err) {
+    console.error('Firestore persistent cache unavailable, falling back to in-memory cache:', err)
+    db = initializeFirestore(app, {})
+  }
   auth = getAuth(app)
 }
 

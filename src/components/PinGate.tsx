@@ -55,7 +55,6 @@ export function PinGate({ children }: { children: ReactNode }) {
         <p className="mt-1 text-sm text-faint">הזינו את קוד הדוכן כדי להמשיך</p>
         <input
           type="password"
-          inputMode="numeric"
           autoFocus
           value={pin}
           onChange={(e) => setPin(e.target.value)}

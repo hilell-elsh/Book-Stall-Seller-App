@@ -3,7 +3,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -116,36 +115,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
   const [eventNameRecord, setEventNameRecord] = useState<EventNameRecord>(() => store.getEventName())
 
-  // Mirrors the latest state outside React's setState updaters. The pull
-  // handlers below need it: they can't use the functional setState form
-  // (`setX(current => ...)`) to read "current", because they also need to
-  // call enqueue() as a side effect when local wins a merge (see below), and
-  // StrictMode intentionally double-invokes updater functions in dev to
-  // catch impure ones — that would double-push the same correction. Reading
-  // from a ref keeps the side effect in a plain function body instead.
-  const latestRef = useRef({
-    categories,
-    items,
-    discountRules,
-    labels,
-    saleRecords,
-    paymentMethods,
-    creators,
-    eventNameRecord,
-  })
-  useEffect(() => {
-    latestRef.current = {
-      categories,
-      items,
-      discountRules,
-      labels,
-      saleRecords,
-      paymentMethods,
-      creators,
-      eventNameRecord,
-    }
-  })
-
   // Inbound path: another device's push arrives here via Firestore's own
   // snapshot listeners (see sync/pull.ts). Firestore's stored document is
   // just whatever setDoc() last overwrote it with — decided by network
@@ -155,52 +124,52 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // this, two devices that raced offline could disagree forever, surviving
   // refreshes, since neither's "locally correct" view ever overwrites the
   // other's stale server copy.
+  //
+  // Uses the functional setState form deliberately: an earlier version read
+  // "current" from a ref mirrored via a separate effect, to avoid calling
+  // enqueue() (a side effect) inside a setState updater. That was a real
+  // production bug — Firestore's onSnapshot can fire within milliseconds of
+  // a local write (its local cache echoes back almost immediately, often
+  // before the mirroring effect's next run), so the ref was frequently
+  // stale, and the resulting merge would silently overwrite a just-made
+  // local edit with an outbox correction computed from stale data (e.g. a
+  // creator added right before a snapshot fired would vanish again). The
+  // functional form is guaranteed fresh. The tradeoff — React's StrictMode
+  // double-invokes updaters in dev to catch impurities like this enqueue()
+  // call — only affects `npm run dev`, never production builds, and even
+  // there a doubled correction just re-pushes the same already-correct row
+  // (harmless, not a correctness bug).
   useEffect(() => {
     function applyRemoteRows<T extends { id: string; updatedAt: string }>(
       entity: string,
-      current: T[],
-      remoteRows: T[],
-      setState: (rows: T[]) => void,
+      rows: T[],
+      setState: (updater: (current: T[]) => T[]) => void,
       saveState: (rows: T[]) => void,
     ): void {
-      const merged = mergeRows(current, remoteRows)
-      saveState(merged)
-      setState(merged)
-      const corrections = findLocalWins(remoteRows, merged)
-      if (corrections.length > 0) enqueue(entity, remoteRows, corrections)
+      setState((current) => {
+        const merged = mergeRows(current, rows)
+        saveState(merged)
+        const corrections = findLocalWins(rows, merged)
+        if (corrections.length > 0) enqueue(entity, rows, corrections)
+        return merged
+      })
     }
 
     return startSyncPull({
-      categories: (rows) =>
-        applyRemoteRows('categories', latestRef.current.categories, rows, setCategories, store.saveCategories),
-      items: (rows) => applyRemoteRows('items', latestRef.current.items, rows, setItems, store.saveItems),
-      discountRules: (rows) =>
-        applyRemoteRows(
-          'discountRules',
-          latestRef.current.discountRules,
-          rows,
-          setDiscountRules,
-          store.saveDiscountRules,
-        ),
-      labels: (rows) => applyRemoteRows('labels', latestRef.current.labels, rows, setLabels, store.saveLabels),
-      saleRecords: (rows) =>
-        applyRemoteRows('saleRecords', latestRef.current.saleRecords, rows, setSaleRecords, store.saveSaleRecords),
-      paymentMethods: (rows) =>
-        applyRemoteRows(
-          'paymentMethods',
-          latestRef.current.paymentMethods,
-          rows,
-          setPaymentMethods,
-          store.savePaymentMethods,
-        ),
-      creators: (rows) =>
-        applyRemoteRows('creators', latestRef.current.creators, rows, setCreators, store.saveCreators),
-      eventName: (record) => {
-        const merged = resolveLastWriteWins(latestRef.current.eventNameRecord, record)
-        store.saveEventName(merged)
-        setEventNameRecord(merged)
-        if (merged !== record) enqueueSingleton('eventName', 'main', record, merged)
-      },
+      categories: (rows) => applyRemoteRows('categories', rows, setCategories, store.saveCategories),
+      items: (rows) => applyRemoteRows('items', rows, setItems, store.saveItems),
+      discountRules: (rows) => applyRemoteRows('discountRules', rows, setDiscountRules, store.saveDiscountRules),
+      labels: (rows) => applyRemoteRows('labels', rows, setLabels, store.saveLabels),
+      saleRecords: (rows) => applyRemoteRows('saleRecords', rows, setSaleRecords, store.saveSaleRecords),
+      paymentMethods: (rows) => applyRemoteRows('paymentMethods', rows, setPaymentMethods, store.savePaymentMethods),
+      creators: (rows) => applyRemoteRows('creators', rows, setCreators, store.saveCreators),
+      eventName: (record) =>
+        setEventNameRecord((current) => {
+          const merged = resolveLastWriteWins(current, record)
+          store.saveEventName(merged)
+          if (merged !== record) enqueueSingleton('eventName', 'main', record, merged)
+          return merged
+        }),
     })
   }, [])
 

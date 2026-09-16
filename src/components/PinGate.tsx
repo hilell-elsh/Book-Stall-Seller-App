@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { isSyncConfigured } from '../sync/firebaseConfig'
 import { signInWithPin, watchStallAccess } from '../sync/pinGate'
+import { startSyncDrain } from '../sync/drain'
 
 type Status = 'loading' | 'signed-out' | 'signed-in'
 
@@ -19,6 +20,14 @@ export function PinGate({ children }: { children: ReactNode }) {
     if (!isSyncConfigured) return
     return watchStallAccess((user) => setStatus(user ? 'signed-in' : 'signed-out'))
   }, [])
+
+  // Only starts draining the outbox once actually signed in — Firestore's
+  // security rules require an authenticated user, and starting earlier would
+  // just mean every op fails and gets requeued for nothing.
+  useEffect(() => {
+    if (status !== 'signed-in') return
+    return startSyncDrain()
+  }, [status])
 
   if (status === 'loading') return null
   if (status === 'signed-in') return children

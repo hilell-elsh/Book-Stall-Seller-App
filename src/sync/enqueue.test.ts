@@ -15,6 +15,13 @@ vi.mock('./deviceId', () => ({
   getDeviceId: () => 'device-1',
 }))
 
+// enqueue() also kicks off a drain attempt (see outbox.ts) — irrelevant to
+// what this file tests, and drain.ts's real implementation would otherwise
+// reach real Firebase config/network here since vitest loads .env.local.
+vi.mock('./drain', () => ({
+  drainOutbox: vi.fn(() => Promise.resolve()),
+}))
+
 const { enqueue } = await import('./outbox')
 
 interface Row {

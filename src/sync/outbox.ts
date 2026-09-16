@@ -1,5 +1,6 @@
 import { getSyncOutbox, saveSyncOutbox } from '../data/store'
 import { getDeviceId } from './deviceId'
+import { drainOutbox } from './drain'
 
 export interface OutboxOp {
   opId: string
@@ -62,10 +63,14 @@ export function diffToOps<T extends { id: string }>(
 }
 
 // The persistX-facing entry point: diffs prev/next and appends any resulting
-// ops onto the persisted local queue. No network here — draining the queue
-// is Task 13.
+// ops onto the persisted local queue, then kicks off a drain attempt so a
+// seller's edit reaches Firestore right away rather than waiting for the
+// next load/online/interval trigger (those remain as retry safety nets —
+// see drain.ts). Fire-and-forget: drainOutbox() no-ops instantly if sync
+// isn't configured, and is safe to call while another drain is in flight.
 export function enqueue<T extends { id: string }>(entity: string, prev: T[], next: T[]): void {
   const ops = diffToOps(entity, prev, next, getDeviceId(), new Date().toISOString())
   if (ops.length === 0) return
   saveSyncOutbox([...getSyncOutbox(), ...ops])
+  void drainOutbox()
 }

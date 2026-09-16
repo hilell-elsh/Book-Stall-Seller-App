@@ -66,16 +66,17 @@ Wraps lines + manual discount + comment, and memoizes `evaluateSale(...)` as `ev
 2. Default it in the corresponding `getXxx()` in `src/data/store.ts` if old data might lack it.
 3. Thread it through `AppDataContext.tsx` CRUD functions if it's user-editable.
 
-### Sync foundations (`src/sync/`, Phase 2 — in progress, Tasks 10-12 done)
+### Sync foundations (`src/sync/`, Phase 2 — in progress, Tasks 10-13 done)
 
 Cloud sync (see the plan doc above for full design) is being built additively — the app must keep working fully offline/local-only at every point in between tasks.
 
-- `src/sync/firebaseConfig.ts` — lazy Firestore/Auth init, gated by `isSyncConfigured` (true only when `VITE_FIREBASE_*`/`VITE_STALL_EMAIL` env vars are set). Everything below no-ops without it.
+- `src/sync/firebaseConfig.ts` — lazy Firestore/Auth init, gated by `isSyncConfigured` (true only when `VITE_FIREBASE_*`/`VITE_STALL_EMAIL` env vars are set). Everything below no-ops without it. **Note for tests**: Vitest loads `.env.local` like Vite does, so `isSyncConfigured` is `true` in the test process whenever a real `.env.local` is present — any test that reaches real sync code (`drain.ts`, `backend.ts`, `pinGate.ts`) must mock its dependencies rather than relying on sync being "off" by default.
 - `src/sync/deviceId.ts` — stable per-device id, generated once, never synced.
-- `src/sync/pinGate.ts` + `src/components/PinGate.tsx` (wraps `main.tsx`) — the stopgap access gate: the "PIN" is the password of one shared Firebase Auth email/password account, not a real per-person login (that's Phase 3).
-- `src/sync/backend.ts` — thin Firestore adapter (`pushAll`/`pullAll` per entity), kept small on purpose so a future backend migration doesn't mean rewriting every call site.
-- `src/sync/outbox.ts` — `diffToOps` (pure prev/next diff) and `enqueue` (the persistX-facing wrapper), appending to a private `syncOutbox` localStorage key. Wired into every `persistX` helper in `AppDataContext.tsx` as of Task 12. No draining yet (Task 13) — the outbox only accumulates for now.
-- `src/pages/ConfigPage/SyncDebugPanel.tsx` — a temporary one-off manual "push everything, read it back, compare counts" debug action (Task 11); expect it to be replaced by Task 15's real sync-status UI once the outbox actually drains automatically.
+- `src/sync/pinGate.ts` + `src/components/PinGate.tsx` (wraps `main.tsx`) — the stopgap access gate: the "PIN" is the password of one shared Firebase Auth email/password account, not a real per-person login (that's Phase 3). Also starts the sync drain loop (see below) once `watchStallAccess` reports signed-in.
+- `src/sync/backend.ts` — thin Firestore adapter (`pushAll`/`pullAll` per entity), kept small on purpose so a future backend migration doesn't mean rewriting every call site. Only used by `SyncDebugPanel`'s one-off bulk push/pull — per-op sync goes through `outbox.ts`/`drain.ts` instead.
+- `src/sync/outbox.ts` — `diffToOps` (pure prev/next diff) and `enqueue` (the persistX-facing wrapper), appending to a private `syncOutbox` localStorage key and then firing an immediate best-effort `drainOutbox()` call so an edit reaches Firestore right away. Wired into every `persistX` helper in `AppDataContext.tsx` as of Task 12.
+- `src/sync/drain.ts` (Task 13) — `drainOutbox()` pushes each queued op to Firestore via `setDoc`/`deleteDoc` (per-doc, not the bulk `backend.ts` path), removing it from the outbox on success and requeuing it with `attempts`/`lastError` on failure — including a per-op timeout so one op stuck with no network can't block the queue forever (Firestore's own SDK is relied on for retrying ordinary transient failures, per the Phase 2 plan). `startSyncDrain()` wires this to fire on load/sign-in, on the browser `online` event, and on a 30s foreground interval as a catch-all — no service worker, no background sync.
+- `src/pages/ConfigPage/SyncDebugPanel.tsx` — a temporary one-off manual "push everything, read it back, compare counts" debug action (Task 11), separate from the automatic per-op drain above; expect it to be replaced by Task 15's real sync-status UI.
 
 ### Demo seeding (`src/dev/demoData.ts`, `src/main.tsx`)
 

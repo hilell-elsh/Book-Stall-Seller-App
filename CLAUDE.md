@@ -10,13 +10,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `.claude/plans/roadmap.md` is the long-range roadmap (Phase 2 cloud sync, designed in implementation-ready task-by-task detail; Phases 3–5 — access control, multi-stall, productionization — roadmap-level only, each gets its own dedicated planning session before implementation starts). Check it before starting any Phase 2+ work, and keep its "Execution status" note at the end current as tasks land.
 
+**After finishing each task from the plan**, before moving to the next one: update the plan doc's "Execution status" note, and re-check this file (CLAUDE.md) — new modules, commands, or architecture introduced by that task usually belong here (e.g. a new `src/sync/` file worth a one-line mention, a new npm script, a changed data-flow diagram). Don't wait until the phase is fully done to document it.
+
 ## Commands
 
 - `npm run dev` — start the Vite dev server.
 - `npm run build` — typecheck (`tsc -b`) then production build to `dist/`.
 - `npm run lint` — oxlint (config in `.oxlintrc.json`). There is no separate typecheck script; `npx tsc -b --noEmit` typechecks without emitting or building.
 - `npm run preview` — serve the built `dist/` locally.
-- No test runner is configured in this repo.
+- `npm run test` — run the Vitest suite (`vitest run`; config in `vitest.config.ts`, tests live next to the code as `*.test.ts`).
 
 ### Offline single-file builds
 
@@ -63,6 +65,17 @@ Wraps lines + manual discount + comment, and memoizes `evaluateSale(...)` as `ev
 1. Add it to the type in `src/types/*.ts`.
 2. Default it in the corresponding `getXxx()` in `src/data/store.ts` if old data might lack it.
 3. Thread it through `AppDataContext.tsx` CRUD functions if it's user-editable.
+
+### Sync foundations (`src/sync/`, Phase 2 — in progress, Tasks 10-12 done)
+
+Cloud sync (see the plan doc above for full design) is being built additively — the app must keep working fully offline/local-only at every point in between tasks.
+
+- `src/sync/firebaseConfig.ts` — lazy Firestore/Auth init, gated by `isSyncConfigured` (true only when `VITE_FIREBASE_*`/`VITE_STALL_EMAIL` env vars are set). Everything below no-ops without it.
+- `src/sync/deviceId.ts` — stable per-device id, generated once, never synced.
+- `src/sync/pinGate.ts` + `src/components/PinGate.tsx` (wraps `main.tsx`) — the stopgap access gate: the "PIN" is the password of one shared Firebase Auth email/password account, not a real per-person login (that's Phase 3).
+- `src/sync/backend.ts` — thin Firestore adapter (`pushAll`/`pullAll` per entity), kept small on purpose so a future backend migration doesn't mean rewriting every call site.
+- `src/sync/outbox.ts` — `diffToOps` (pure prev/next diff) and `enqueue` (the persistX-facing wrapper), appending to a private `syncOutbox` localStorage key. Wired into every `persistX` helper in `AppDataContext.tsx` as of Task 12. No draining yet (Task 13) — the outbox only accumulates for now.
+- `src/pages/ConfigPage/SyncDebugPanel.tsx` — a temporary one-off manual "push everything, read it back, compare counts" debug action (Task 11); expect it to be replaced by Task 15's real sync-status UI once the outbox actually drains automatically.
 
 ### Demo seeding (`src/dev/demoData.ts`, `src/main.tsx`)
 

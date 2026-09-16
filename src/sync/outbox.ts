@@ -74,3 +74,21 @@ export function enqueue<T extends { id: string }>(entity: string, prev: T[], nex
   saveSyncOutbox([...getSyncOutbox(), ...ops])
   void drainOutbox()
 }
+
+// Same as enqueue() but for single-document entities (currently just
+// eventName) that aren't shaped as an array of id-rows.
+export function enqueueSingleton<T>(entity: string, entityId: string, prev: T, next: T): void {
+  if (JSON.stringify(prev) === JSON.stringify(next)) return
+  const op: OutboxOp = {
+    opId: `${entity}:${entityId}:${new Date().toISOString()}`,
+    entity,
+    entityId,
+    op: 'upsert',
+    payload: next,
+    deviceId: getDeviceId(),
+    clientTimestamp: new Date().toISOString(),
+    attempts: 0,
+  }
+  saveSyncOutbox([...getSyncOutbox(), op])
+  void drainOutbox()
+}

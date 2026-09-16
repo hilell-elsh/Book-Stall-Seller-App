@@ -126,12 +126,25 @@ export function saveCreators(creators: Creator[]): void {
   writeJSON(CREATORS_KEY, creators)
 }
 
-export function getEventName(): string {
-  return readJSON<string>(EVENT_NAME_KEY, '')
+export interface EventNameRecord {
+  name: string
+  updatedAt: string
 }
 
-export function saveEventName(name: string): void {
-  writeJSON(EVENT_NAME_KEY, name)
+// Pre-Phase-2 data stored a bare string with no updatedAt; normalize it into
+// the timestamped shape LWW sync needs, same "default on read" convention as
+// every other field added to a persisted type. The epoch timestamp means any
+// real remote value will always be treated as newer.
+export function getEventName(): EventNameRecord {
+  const raw = readJSON<string | EventNameRecord>(EVENT_NAME_KEY, { name: '', updatedAt: new Date(0).toISOString() })
+  if (typeof raw === 'string') {
+    return { name: raw, updatedAt: new Date(0).toISOString() }
+  }
+  return raw
+}
+
+export function saveEventName(record: EventNameRecord): void {
+  writeJSON(EVENT_NAME_KEY, record)
 }
 
 // Sync bookkeeping only — private/device-local, never itself synced (same

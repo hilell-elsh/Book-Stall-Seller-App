@@ -3,4 +3,5 @@ export interface PaymentMethod {
   name: string
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }

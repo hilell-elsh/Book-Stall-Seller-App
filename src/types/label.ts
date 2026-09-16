@@ -3,4 +3,5 @@ export interface Label {
   name: string
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }

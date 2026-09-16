@@ -1,13 +1,18 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
-import { enqueue } from '../sync/outbox'
+import type { EventNameRecord } from '../data/store'
+import { applyCategoryTombstone, applyCreatorTombstone, applyLabelTombstone, isLive } from '../domain/cascade'
+import { enqueue, enqueueSingleton } from '../sync/outbox'
+import { mergeRows, resolveLastWriteWins } from '../sync/merge'
+import { startSyncPull } from '../sync/pull'
 import type { Category, CatalogItem, CreatorShare } from '../types/catalog'
 import type { Creator } from '../types/creator'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
@@ -108,7 +113,65 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     store.getPaymentMethods(),
   )
   const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
-  const [eventName, setEventNameState] = useState<string>(() => store.getEventName())
+  const [eventNameRecord, setEventNameRecord] = useState<EventNameRecord>(() => store.getEventName())
+
+  // Inbound path: another device's push arrives here via Firestore's own
+  // snapshot listeners (see sync/pull.ts). Deliberately bypasses persistX/
+  // enqueue — the change already exists on the server, so re-queuing it would
+  // just push it right back. Functional setState avoids stale closures since
+  // these callbacks fire outside the normal render-triggered flow.
+  useEffect(() => {
+    return startSyncPull({
+      categories: (rows) =>
+        setCategories((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveCategories(merged)
+          return merged
+        }),
+      items: (rows) =>
+        setItems((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveItems(merged)
+          return merged
+        }),
+      discountRules: (rows) =>
+        setDiscountRules((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveDiscountRules(merged)
+          return merged
+        }),
+      labels: (rows) =>
+        setLabels((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveLabels(merged)
+          return merged
+        }),
+      saleRecords: (rows) =>
+        setSaleRecords((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveSaleRecords(merged)
+          return merged
+        }),
+      paymentMethods: (rows) =>
+        setPaymentMethods((current) => {
+          const merged = mergeRows(current, rows)
+          store.savePaymentMethods(merged)
+          return merged
+        }),
+      creators: (rows) =>
+        setCreators((current) => {
+          const merged = mergeRows(current, rows)
+          store.saveCreators(merged)
+          return merged
+        }),
+      eventName: (record) =>
+        setEventNameRecord((current) => {
+          const merged = resolveLastWriteWins(current, record)
+          store.saveEventName(merged)
+          return merged
+        }),
+    })
+  }, [])
 
   function persistCategories(next: Category[]) {
     enqueue('categories', categories, next)
@@ -153,8 +216,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function addCategory(name: string) {
-    const nextOrder = categories.length
-      ? Math.max(...categories.map((c) => c.order)) + 1
+    const liveCategories = categories.filter(isLive)
+    const nextOrder = liveCategories.length
+      ? Math.max(...liveCategories.map((c) => c.order)) + 1
       : 0
     const category: Category = {
       id: newId(),
@@ -172,19 +236,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Soft-delete: the category row and its items stay, tombstoned via
+  // deletedAt, so a pulled delete never leaves another device's concurrent
+  // edit pointing at a vanished id (see cascade.ts).
   function deleteCategory(id: string) {
-    persistCategories(categories.filter((c) => c.id !== id))
-    persistItems(items.filter((item) => item.categoryId !== id))
+    const deletedAt = now()
+    persistCategories(
+      categories.map((c) => (c.id === id ? { ...c, deletedAt } : c)),
+    )
+    const cascaded = applyCategoryTombstone(items, id, deletedAt)
+    persistItems(cascaded.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function moveCategory(id: string, direction: 'up' | 'down') {
-    persistCategories(reorder(categories, id, direction))
+    const tombstoned = categories.filter((c) => !isLive(c))
+    persistCategories([...reorder(categories.filter(isLive), id, direction), ...tombstoned])
   }
 
   function addItem(categoryId: string, name: string, price: number) {
-    const siblings = items.filter((item) => item.categoryId === categoryId)
-    const nextOrder = siblings.length
-      ? Math.max(...siblings.map((item) => item.order)) + 1
+    const liveSiblings = items.filter((item) => item.categoryId === categoryId && isLive(item))
+    const nextOrder = liveSiblings.length
+      ? Math.max(...liveSiblings.map((item) => item.order)) + 1
       : 0
     const item: CatalogItem = {
       id: newId(),
@@ -215,15 +287,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteItem(id: string) {
-    persistItems(items.filter((item) => item.id !== id))
+    persistItems(items.map((item) => (item.id === id ? { ...item, deletedAt: now() } : item)))
   }
 
   function changeItemCategory(id: string, categoryId: string) {
     const item = items.find((entry) => entry.id === id)
     if (!item || item.categoryId === categoryId) return
-    const siblings = items.filter((entry) => entry.categoryId === categoryId)
-    const nextOrder = siblings.length
-      ? Math.max(...siblings.map((entry) => entry.order)) + 1
+    const liveSiblings = items.filter((entry) => entry.categoryId === categoryId && isLive(entry))
+    const nextOrder = liveSiblings.length
+      ? Math.max(...liveSiblings.map((entry) => entry.order)) + 1
       : 0
     persistItems(
       items.map((entry) =>
@@ -237,14 +309,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function moveItem(id: string, direction: 'up' | 'down') {
     const item = items.find((entry) => entry.id === id)
     if (!item) return
-    const siblings = items.filter((entry) => entry.categoryId === item.categoryId)
-    const others = items.filter((entry) => entry.categoryId !== item.categoryId)
-    persistItems([...others, ...reorder(siblings, id, direction)])
+    const liveSiblings = items.filter((entry) => entry.categoryId === item.categoryId && isLive(entry))
+    const others = items.filter((entry) => entry.categoryId !== item.categoryId || !isLive(entry))
+    persistItems([...others, ...reorder(liveSiblings, id, direction)])
   }
 
   function addDiscountRule(draft: DiscountRuleDraft) {
-    const nextOrder = discountRules.length
-      ? Math.max(...discountRules.map((rule) => rule.order)) + 1
+    const liveRules = discountRules.filter(isLive)
+    const nextOrder = liveRules.length
+      ? Math.max(...liveRules.map((rule) => rule.order)) + 1
       : 0
     const rule = {
       ...draft,
@@ -273,7 +346,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteDiscountRule(id: string) {
-    persistDiscountRules(discountRules.filter((rule) => rule.id !== id))
+    persistDiscountRules(
+      discountRules.map((rule) => (rule.id === id ? { ...rule, deletedAt: now() } : rule)),
+    )
   }
 
   function toggleDiscountRule(id: string) {
@@ -285,7 +360,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function moveDiscountRule(id: string, direction: 'up' | 'down') {
-    persistDiscountRules(reorder(discountRules, id, direction))
+    const tombstoned = discountRules.filter((rule) => !isLive(rule))
+    persistDiscountRules([...reorder(discountRules.filter(isLive), id, direction), ...tombstoned])
   }
 
   function addLabel(name: string) {
@@ -300,15 +376,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteLabel(id: string) {
-    persistLabels(labels.filter((label) => label.id !== id))
+    const deletedAt = now()
+    persistLabels(labels.map((label) => (label.id === id ? { ...label, deletedAt } : label)))
     // Unlink rather than cascade-delete: removing a label shouldn't remove the items wearing it.
-    persistItems(
-      items.map((item) =>
-        item.labelIds.includes(id)
-          ? { ...item, labelIds: item.labelIds.filter((labelId) => labelId !== id), updatedAt: now() }
-          : item,
-      ),
-    )
+    const unlinked = applyLabelTombstone(items, id)
+    persistItems(unlinked.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function toggleItemLabel(itemId: string, labelId: string) {
@@ -348,7 +420,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteSaleRecord(id: string) {
-    persistSaleRecords(saleRecords.filter((record) => record.id !== id))
+    persistSaleRecords(
+      saleRecords.map((record) => (record.id === id ? { ...record, deletedAt: now() } : record)),
+    )
   }
 
   function addPaymentMethod(name: string) {
@@ -365,7 +439,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deletePaymentMethod(id: string) {
-    persistPaymentMethods(paymentMethods.filter((method) => method.id !== id))
+    persistPaymentMethods(
+      paymentMethods.map((method) => (method.id === id ? { ...method, deletedAt: now() } : method)),
+    )
   }
 
   function addCreator(name: string) {
@@ -380,19 +456,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteCreator(id: string) {
-    persistCreators(creators.filter((creator) => creator.id !== id))
+    const deletedAt = now()
+    persistCreators(creators.map((creator) => (creator.id === id ? { ...creator, deletedAt } : creator)))
     // Unlink rather than block: removing a creator shouldn't strand an item's remaining shares.
-    persistItems(
-      items.map((item) =>
-        item.creatorShares.some((share) => share.creatorId === id)
-          ? {
-              ...item,
-              creatorShares: item.creatorShares.filter((share) => share.creatorId !== id),
-              updatedAt: now(),
-            }
-          : item,
-      ),
-    )
+    const unlinked = applyCreatorTombstone(items, id)
+    persistItems(unlinked.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function setItemCreatorShares(itemId: string, shares: CreatorShare[]) {
@@ -400,14 +468,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function setEventName(name: string) {
-    setEventNameState(name)
-    store.saveEventName(name)
+    const next: EventNameRecord = { name, updatedAt: now() }
+    enqueueSingleton('eventName', 'main', eventNameRecord, next)
+    setEventNameRecord(next)
+    store.saveEventName(next)
   }
 
   const value = useMemo<AppDataContextValue>(
     () => ({
-      categories: sortByOrder(categories),
-      items: sortByOrder(items),
+      categories: sortByOrder(categories.filter(isLive)),
+      items: sortByOrder(items.filter(isLive)),
       addCategory,
       renameCategory,
       deleteCategory,
@@ -417,35 +487,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       deleteItem,
       moveItem,
       changeItemCategory,
-      discountRules: sortByOrder(discountRules),
+      discountRules: sortByOrder(discountRules.filter(isLive)),
       addDiscountRule,
       updateDiscountRule,
       deleteDiscountRule,
       toggleDiscountRule,
       moveDiscountRule,
-      labels,
+      labels: labels.filter(isLive),
       addLabel,
       renameLabel,
       deleteLabel,
       toggleItemLabel,
       toggleItemActive,
-      saleRecords,
+      saleRecords: saleRecords.filter(isLive),
       addSaleRecord,
       updateSaleRecord,
       deleteSaleRecord,
-      paymentMethods,
+      paymentMethods: paymentMethods.filter(isLive),
       addPaymentMethod,
       renamePaymentMethod,
       deletePaymentMethod,
-      creators,
+      creators: creators.filter(isLive),
       addCreator,
       renameCreator,
       deleteCreator,
       setItemCreatorShares,
-      eventName,
+      eventName: eventNameRecord.name,
       setEventName,
     }),
-    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators, eventName],
+    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators, eventNameRecord],
   )
 
   return (

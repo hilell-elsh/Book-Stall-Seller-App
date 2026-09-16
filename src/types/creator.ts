@@ -3,4 +3,5 @@ export interface Creator {
   name: string
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }

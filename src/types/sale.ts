@@ -37,6 +37,7 @@ export interface SaleRecord {
   id: string
   createdAt: string
   updatedAt: string
+  deletedAt?: string
   eventName: string
   paymentMethodId?: string
   receiver?: string

@@ -12,6 +12,7 @@ interface Tombstonable {
 interface ItemLike extends Tombstonable {
   categoryId: string
   labelIds: string[]
+  creatorShares: { creatorId: string }[]
 }
 
 // Category delete cascades to its items: they're soft-deleted too, not
@@ -33,6 +34,17 @@ export function applyLabelTombstone<T extends ItemLike>(items: T[], labelId: str
   return items.map((item) =>
     item.labelIds.includes(labelId)
       ? { ...item, labelIds: item.labelIds.filter((id) => id !== labelId) }
+      : item,
+  )
+}
+
+// Creator delete unlinks rather than cascade-deletes: items keep existing and
+// keep whatever other creator shares they have, they just stop crediting the
+// tombstoned creator (same shape of fix as label unlinking above).
+export function applyCreatorTombstone<T extends ItemLike>(items: T[], creatorId: string): T[] {
+  return items.map((item) =>
+    item.creatorShares.some((share) => share.creatorId === creatorId)
+      ? { ...item, creatorShares: item.creatorShares.filter((share) => share.creatorId !== creatorId) }
       : item,
   )
 }

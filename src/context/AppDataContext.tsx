@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -11,7 +12,7 @@ import * as store from '../data/store'
 import type { EventNameRecord } from '../data/store'
 import { applyCategoryTombstone, applyCreatorTombstone, applyLabelTombstone, isLive } from '../domain/cascade'
 import { enqueue, enqueueSingleton } from '../sync/outbox'
-import { mergeRows, resolveLastWriteWins } from '../sync/merge'
+import { findLocalWins, mergeRows, resolveLastWriteWins } from '../sync/merge'
 import { startSyncPull } from '../sync/pull'
 import type { Category, CatalogItem, CreatorShare } from '../types/catalog'
 import type { Creator } from '../types/creator'
@@ -115,61 +116,91 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
   const [eventNameRecord, setEventNameRecord] = useState<EventNameRecord>(() => store.getEventName())
 
-  // Inbound path: another device's push arrives here via Firestore's own
-  // snapshot listeners (see sync/pull.ts). Deliberately bypasses persistX/
-  // enqueue — the change already exists on the server, so re-queuing it would
-  // just push it right back. Functional setState avoids stale closures since
-  // these callbacks fire outside the normal render-triggered flow.
+  // Mirrors the latest state outside React's setState updaters. The pull
+  // handlers below need it: they can't use the functional setState form
+  // (`setX(current => ...)`) to read "current", because they also need to
+  // call enqueue() as a side effect when local wins a merge (see below), and
+  // StrictMode intentionally double-invokes updater functions in dev to
+  // catch impure ones — that would double-push the same correction. Reading
+  // from a ref keeps the side effect in a plain function body instead.
+  const latestRef = useRef({
+    categories,
+    items,
+    discountRules,
+    labels,
+    saleRecords,
+    paymentMethods,
+    creators,
+    eventNameRecord,
+  })
   useEffect(() => {
+    latestRef.current = {
+      categories,
+      items,
+      discountRules,
+      labels,
+      saleRecords,
+      paymentMethods,
+      creators,
+      eventNameRecord,
+    }
+  })
+
+  // Inbound path: another device's push arrives here via Firestore's own
+  // snapshot listeners (see sync/pull.ts). Firestore's stored document is
+  // just whatever setDoc() last overwrote it with — decided by network
+  // arrival order, not by updatedAt — so a real LWW guarantee only holds if,
+  // whenever this merge picks the local row over a stale/racing remote one,
+  // that winning row gets pushed back to correct Firestore too. Without
+  // this, two devices that raced offline could disagree forever, surviving
+  // refreshes, since neither's "locally correct" view ever overwrites the
+  // other's stale server copy.
+  useEffect(() => {
+    function applyRemoteRows<T extends { id: string; updatedAt: string }>(
+      entity: string,
+      current: T[],
+      remoteRows: T[],
+      setState: (rows: T[]) => void,
+      saveState: (rows: T[]) => void,
+    ): void {
+      const merged = mergeRows(current, remoteRows)
+      saveState(merged)
+      setState(merged)
+      const corrections = findLocalWins(remoteRows, merged)
+      if (corrections.length > 0) enqueue(entity, remoteRows, corrections)
+    }
+
     return startSyncPull({
       categories: (rows) =>
-        setCategories((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveCategories(merged)
-          return merged
-        }),
-      items: (rows) =>
-        setItems((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveItems(merged)
-          return merged
-        }),
+        applyRemoteRows('categories', latestRef.current.categories, rows, setCategories, store.saveCategories),
+      items: (rows) => applyRemoteRows('items', latestRef.current.items, rows, setItems, store.saveItems),
       discountRules: (rows) =>
-        setDiscountRules((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveDiscountRules(merged)
-          return merged
-        }),
-      labels: (rows) =>
-        setLabels((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveLabels(merged)
-          return merged
-        }),
+        applyRemoteRows(
+          'discountRules',
+          latestRef.current.discountRules,
+          rows,
+          setDiscountRules,
+          store.saveDiscountRules,
+        ),
+      labels: (rows) => applyRemoteRows('labels', latestRef.current.labels, rows, setLabels, store.saveLabels),
       saleRecords: (rows) =>
-        setSaleRecords((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveSaleRecords(merged)
-          return merged
-        }),
+        applyRemoteRows('saleRecords', latestRef.current.saleRecords, rows, setSaleRecords, store.saveSaleRecords),
       paymentMethods: (rows) =>
-        setPaymentMethods((current) => {
-          const merged = mergeRows(current, rows)
-          store.savePaymentMethods(merged)
-          return merged
-        }),
+        applyRemoteRows(
+          'paymentMethods',
+          latestRef.current.paymentMethods,
+          rows,
+          setPaymentMethods,
+          store.savePaymentMethods,
+        ),
       creators: (rows) =>
-        setCreators((current) => {
-          const merged = mergeRows(current, rows)
-          store.saveCreators(merged)
-          return merged
-        }),
-      eventName: (record) =>
-        setEventNameRecord((current) => {
-          const merged = resolveLastWriteWins(current, record)
-          store.saveEventName(merged)
-          return merged
-        }),
+        applyRemoteRows('creators', latestRef.current.creators, rows, setCreators, store.saveCreators),
+      eventName: (record) => {
+        const merged = resolveLastWriteWins(latestRef.current.eventNameRecord, record)
+        store.saveEventName(merged)
+        setEventNameRecord(merged)
+        if (merged !== record) enqueueSingleton('eventName', 'main', record, merged)
+      },
     })
   }, [])
 

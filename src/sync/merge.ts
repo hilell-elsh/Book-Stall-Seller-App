@@ -21,3 +21,19 @@ export function mergeRows<T extends Timestamped & { id: string }>(local: T[], re
   const localOnly = local.filter((row) => !remoteIds.has(row.id))
   return [...merged, ...localOnly]
 }
+
+// Firestore's stored document is only ever a plain overwrite (setDoc), so
+// which write "wins" there is decided by network arrival order, not by
+// updatedAt — a genuine LWW guarantee only holds if whichever device's
+// mergeRows() picks its own local row over a stale/racing remote one also
+// pushes that winning row back, correcting Firestore to match. This finds
+// exactly those rows so the caller can re-enqueue them. Relies on
+// mergeRows/resolveLastWriteWins returning the winning object by reference
+// (never a clone) — a property their own tests above already lock in.
+export function findLocalWins<T extends { id: string }>(remote: T[], merged: T[]): T[] {
+  const remoteById = new Map(remote.map((row) => [row.id, row]))
+  return merged.filter((row) => {
+    const remoteRow = remoteById.get(row.id)
+    return remoteRow !== undefined && remoteRow !== row
+  })
+}

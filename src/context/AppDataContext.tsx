@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
+import { enqueue } from '../sync/outbox'
 import type { Category, CatalogItem, CreatorShare } from '../types/catalog'
 import type { Creator } from '../types/creator'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
@@ -110,36 +111,43 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [eventName, setEventNameState] = useState<string>(() => store.getEventName())
 
   function persistCategories(next: Category[]) {
+    enqueue('categories', categories, next)
     setCategories(next)
     store.saveCategories(next)
   }
 
   function persistItems(next: CatalogItem[]) {
+    enqueue('items', items, next)
     setItems(next)
     store.saveItems(next)
   }
 
   function persistDiscountRules(next: DiscountRule[]) {
+    enqueue('discountRules', discountRules, next)
     setDiscountRules(next)
     store.saveDiscountRules(next)
   }
 
   function persistLabels(next: Label[]) {
+    enqueue('labels', labels, next)
     setLabels(next)
     store.saveLabels(next)
   }
 
   function persistSaleRecords(next: SaleRecord[]) {
+    enqueue('saleRecords', saleRecords, next)
     setSaleRecords(next)
     store.saveSaleRecords(next)
   }
 
   function persistPaymentMethods(next: PaymentMethod[]) {
+    enqueue('paymentMethods', paymentMethods, next)
     setPaymentMethods(next)
     store.savePaymentMethods(next)
   }
 
   function persistCreators(next: Creator[]) {
+    enqueue('creators', creators, next)
     setCreators(next)
     store.saveCreators(next)
   }

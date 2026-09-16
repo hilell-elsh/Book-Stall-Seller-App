@@ -5,6 +5,7 @@ import type { Label } from '../types/label'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
 import type { ItemSelector } from '../types/selector'
+import type { OutboxOp } from '../sync/outbox'
 import { readJSON, writeJSON } from './localStorageDriver'
 
 const CATEGORIES_KEY = 'categories'
@@ -15,6 +16,7 @@ const SALE_RECORDS_KEY = 'saleRecords'
 const PAYMENT_METHODS_KEY = 'paymentMethods'
 const CREATORS_KEY = 'creators'
 const EVENT_NAME_KEY = 'eventName'
+const SYNC_OUTBOX_KEY = 'syncOutbox'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -130,4 +132,14 @@ export function getEventName(): string {
 
 export function saveEventName(name: string): void {
   writeJSON(EVENT_NAME_KEY, name)
+}
+
+// Sync bookkeeping only — private/device-local, never itself synced (same
+// bucket as deviceId and the stall PIN session).
+export function getSyncOutbox(): OutboxOp[] {
+  return readJSON<OutboxOp[]>(SYNC_OUTBOX_KEY, [])
+}
+
+export function saveSyncOutbox(ops: OutboxOp[]): void {
+  writeJSON(SYNC_OUTBOX_KEY, ops)
 }

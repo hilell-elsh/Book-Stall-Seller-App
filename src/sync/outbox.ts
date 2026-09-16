@@ -1,3 +1,6 @@
+import { getSyncOutbox, saveSyncOutbox } from '../data/store'
+import { getDeviceId } from './deviceId'
+
 export interface OutboxOp {
   opId: string
   entity: string
@@ -56,4 +59,13 @@ export function diffToOps<T extends { id: string }>(
   }
 
   return ops
+}
+
+// The persistX-facing entry point: diffs prev/next and appends any resulting
+// ops onto the persisted local queue. No network here — draining the queue
+// is Task 13.
+export function enqueue<T extends { id: string }>(entity: string, prev: T[], next: T[]): void {
+  const ops = diffToOps(entity, prev, next, getDeviceId(), new Date().toISOString())
+  if (ops.length === 0) return
+  saveSyncOutbox([...getSyncOutbox(), ...ops])
 }

@@ -5,7 +5,10 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { PinGate } from './components/PinGate.tsx'
 import { AppDataProvider } from './context/AppDataContext.tsx'
+import { installGlobalErrorLogging } from './debug/errorLog.ts'
 import { seedDemoDataIfEmpty } from './dev/demoData.ts'
+
+installGlobalErrorLogging()
 
 if (import.meta.env.VITE_SEED_DEMO === 'true') {
   seedDemoDataIfEmpty()

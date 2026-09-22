@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CategoryManager } from './CategoryManager'
 import { CreatorManager } from './CreatorManager'
+import { DebugLogPanel } from './DebugLogPanel'
 import { DiscountRuleManager } from './DiscountRuleManager'
 import { EventSettings } from './EventSettings'
 import { ItemManager } from './ItemManager'
@@ -29,6 +30,7 @@ export function ConfigPage() {
       <div className="mt-3 space-y-3">
         <EventSettings />
         <SyncStatusPanel />
+        <DebugLogPanel />
       </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">

@@ -20,6 +20,10 @@ dist-offline-demo
 .env.*
 !.env.example
 
+# Claude Code local-only files (project-scoped .claude/ is otherwise committed)
+.claude/settings.local.json
+.claude/.verify-ok
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

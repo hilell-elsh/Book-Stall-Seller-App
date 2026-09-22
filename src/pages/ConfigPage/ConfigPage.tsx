@@ -7,6 +7,7 @@ import { EventSettings } from './EventSettings'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
 import { PaymentMethodManager } from './PaymentMethodManager'
+import { ShiftSellerSettings } from './ShiftSellerSettings'
 import { SyncStatusPanel } from './SyncStatusPanel'
 
 type Section = 'items' | 'discounts' | 'categories' | 'labels' | 'payments' | 'creators'
@@ -29,6 +30,7 @@ export function ConfigPage() {
 
       <div className="mt-3 space-y-3">
         <EventSettings />
+        <ShiftSellerSettings />
         <SyncStatusPanel />
         <DebugLogPanel />
       </div>

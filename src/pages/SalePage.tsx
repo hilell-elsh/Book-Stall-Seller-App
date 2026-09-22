@@ -4,7 +4,6 @@ import { ItemBrowser } from '../components/cart/ItemBrowser'
 import { ManualAdjustments } from '../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../components/cart/MobileCartBar'
 import { PaymentSelector } from '../components/cart/PaymentSelector'
-import { ShiftSellerControl } from '../components/cart/ShiftSellerControl'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
 import { defaultReceiverForShiftSeller } from '../domain/shiftSeller'
@@ -18,13 +17,22 @@ interface SalePageProps {
 export function SalePage({ cart }: SalePageProps) {
   const { categories, items, labels, creators, paymentMethods, eventName, addSaleRecord } =
     useAppData()
-  const { shiftSeller, setShiftSeller, clearShiftSeller } = useShiftSeller()
+  // Read-only here — set from the Settings page (ShiftSellerSettings) so
+  // picking it happens once per shift, before selling starts, rather than
+  // via a control living in the middle of an in-progress sale.
+  const { shiftSeller } = useShiftSeller()
   const [paymentMethodId, setPaymentMethodId] = useState('')
   const [receiver, setReceiver] = useState(() => defaultReceiverForShiftSeller(shiftSeller, creators))
+  const [isCustomReceiver, setIsCustomReceiver] = useState(false)
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
   const hasItems = cart.lines.length > 0
+
+  function handleReceiverChange(name: string, isCustom: boolean) {
+    setReceiver(name)
+    setIsCustomReceiver(isCustom)
+  }
 
   function handleSave() {
     if (!canSave) return
@@ -40,6 +48,7 @@ export function SalePage({ cart }: SalePageProps) {
     cart.clear()
     setPaymentMethodId('')
     setReceiver(defaultReceiverForShiftSeller(shiftSeller, creators))
+    setIsCustomReceiver(false)
   }
 
   function scrollToCart() {
@@ -88,18 +97,14 @@ export function SalePage({ cart }: SalePageProps) {
           onManualDiscountChange={cart.setManualDiscount}
           onCommentChange={cart.setComment}
         />
-        <ShiftSellerControl
-          creators={creators}
-          creatorId={shiftSeller?.creatorId ?? ''}
-          onChange={setShiftSeller}
-          onClear={clearShiftSeller}
-        />
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}
+          creators={creators}
           receiver={receiver}
+          isCustomReceiver={isCustomReceiver}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiver}
+          onReceiverChange={handleReceiverChange}
           onSubmit={handleSave}
         />
         <SaleSummary

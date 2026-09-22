@@ -24,10 +24,18 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
   )
   const [paymentMethodId, setPaymentMethodId] = useState(record.paymentMethodId ?? '')
   const [receiver, setReceiver] = useState(record.receiver ?? '')
+  const [isCustomReceiver, setIsCustomReceiver] = useState(
+    () => receiver !== '' && !creators.some((creator) => creator.name === receiver),
+  )
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
   const hasItems = cart.lines.length > 0
+
+  function handleReceiverChange(name: string, isCustom: boolean) {
+    setReceiver(name)
+    setIsCustomReceiver(isCustom)
+  }
 
   function handleSave() {
     if (!canSave) return
@@ -88,9 +96,11 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}
+          creators={creators}
           receiver={receiver}
+          isCustomReceiver={isCustomReceiver}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiver}
+          onReceiverChange={handleReceiverChange}
           onSubmit={handleSave}
         />
         <SaleSummary

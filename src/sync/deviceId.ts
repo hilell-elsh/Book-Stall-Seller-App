@@ -1,3 +1,5 @@
+import { newId } from '../domain/ids'
+
 // A stable, generated-once identifier for this device/browser. Sync
 // bookkeeping only — never a user identity, never synced itself (same
 // private bucket as the stall PIN and, later, ShiftSeller).
@@ -16,7 +18,7 @@ const localStorageBacked: DeviceIdStorage = {
 export function getDeviceId(storage: DeviceIdStorage = localStorageBacked): string {
   const existing = storage.read()
   if (existing) return existing
-  const generated = crypto.randomUUID()
+  const generated = newId()
   storage.write(generated)
   return generated
 }

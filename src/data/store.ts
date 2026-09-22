@@ -5,6 +5,7 @@ import type { Label } from '../types/label'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
 import type { ItemSelector } from '../types/selector'
+import type { ShiftSeller } from '../domain/shiftSeller'
 import type { OutboxOp } from '../sync/outbox'
 import { readJSON, writeJSON } from './localStorageDriver'
 
@@ -17,6 +18,7 @@ const PAYMENT_METHODS_KEY = 'paymentMethods'
 const CREATORS_KEY = 'creators'
 const EVENT_NAME_KEY = 'eventName'
 const SYNC_OUTBOX_KEY = 'syncOutbox'
+const SHIFT_SELLER_KEY = 'shiftSeller'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -155,4 +157,15 @@ export function getSyncOutbox(): OutboxOp[] {
 
 export function saveSyncOutbox(ops: OutboxOp[]): void {
   writeJSON(SYNC_OUTBOX_KEY, ops)
+}
+
+// Private, device-local "who's on shift here" setting (see
+// domain/shiftSeller.ts) — same bucket as deviceId/syncOutbox: never wired
+// into AppDataContext's persistX/outbox path, so it never syncs.
+export function getShiftSeller(): ShiftSeller | null {
+  return readJSON<ShiftSeller | null>(SHIFT_SELLER_KEY, null)
+}
+
+export function saveShiftSeller(shiftSeller: ShiftSeller | null): void {
+  writeJSON(SHIFT_SELLER_KEY, shiftSeller)
 }

@@ -4,9 +4,12 @@ import { ItemBrowser } from '../components/cart/ItemBrowser'
 import { ManualAdjustments } from '../components/cart/ManualAdjustments'
 import { MobileCartBar } from '../components/cart/MobileCartBar'
 import { PaymentSelector } from '../components/cart/PaymentSelector'
+import { ShiftSellerControl } from '../components/cart/ShiftSellerControl'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
+import { defaultReceiverForShiftSeller } from '../domain/shiftSeller'
 import type { CartState } from '../hooks/useCartState'
+import { useShiftSeller } from '../hooks/useShiftSeller'
 
 interface SalePageProps {
   cart: CartState
@@ -15,8 +18,9 @@ interface SalePageProps {
 export function SalePage({ cart }: SalePageProps) {
   const { categories, items, labels, creators, paymentMethods, eventName, addSaleRecord } =
     useAppData()
+  const { shiftSeller, setShiftSeller, clearShiftSeller } = useShiftSeller()
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [receiver, setReceiver] = useState('')
+  const [receiver, setReceiver] = useState(() => defaultReceiverForShiftSeller(shiftSeller, creators))
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
@@ -35,7 +39,7 @@ export function SalePage({ cart }: SalePageProps) {
     })
     cart.clear()
     setPaymentMethodId('')
-    setReceiver('')
+    setReceiver(defaultReceiverForShiftSeller(shiftSeller, creators))
   }
 
   function scrollToCart() {
@@ -83,6 +87,12 @@ export function SalePage({ cart }: SalePageProps) {
           comment={cart.comment}
           onManualDiscountChange={cart.setManualDiscount}
           onCommentChange={cart.setComment}
+        />
+        <ShiftSellerControl
+          creators={creators}
+          creatorId={shiftSeller?.creatorId ?? ''}
+          onChange={setShiftSeller}
+          onClear={clearShiftSeller}
         />
         <PaymentSelector
           paymentMethods={paymentMethods}

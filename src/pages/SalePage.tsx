@@ -21,9 +21,18 @@ export function SalePage({ cart }: SalePageProps) {
   // picking it happens once per shift, before selling starts, rather than
   // via a control living in the middle of an in-progress sale.
   const { shiftSeller } = useShiftSeller()
+
+  // The shift seller is free text and isn't necessarily one of the
+  // creators, so the receiver picker (a creators dropdown + "other" free
+  // text) needs to know whether its default lands in "other" mode too.
+  function resolveShiftSellerDefault(): { receiver: string; isCustomReceiver: boolean } {
+    const name = defaultReceiverForShiftSeller(shiftSeller)
+    return { receiver: name, isCustomReceiver: name !== '' && !creators.some((creator) => creator.name === name) }
+  }
+
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [receiver, setReceiver] = useState(() => defaultReceiverForShiftSeller(shiftSeller, creators))
-  const [isCustomReceiver, setIsCustomReceiver] = useState(false)
+  const [receiver, setReceiver] = useState(() => resolveShiftSellerDefault().receiver)
+  const [isCustomReceiver, setIsCustomReceiver] = useState(() => resolveShiftSellerDefault().isCustomReceiver)
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
@@ -47,8 +56,9 @@ export function SalePage({ cart }: SalePageProps) {
     })
     cart.clear()
     setPaymentMethodId('')
-    setReceiver(defaultReceiverForShiftSeller(shiftSeller, creators))
-    setIsCustomReceiver(false)
+    const shiftDefault = resolveShiftSellerDefault()
+    setReceiver(shiftDefault.receiver)
+    setIsCustomReceiver(shiftDefault.isCustomReceiver)
   }
 
   function scrollToCart() {

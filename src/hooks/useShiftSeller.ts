@@ -4,7 +4,7 @@ import type { ShiftSeller } from '../domain/shiftSeller'
 
 export interface ShiftSellerState {
   shiftSeller: ShiftSeller | null
-  setShiftSeller: (creatorId: string) => void
+  setShiftSeller: (name: string) => void
   clearShiftSeller: () => void
 }
 
@@ -14,8 +14,8 @@ export interface ShiftSellerState {
 export function useShiftSeller(): ShiftSellerState {
   const [shiftSeller, setShiftSellerState] = useState<ShiftSeller | null>(() => store.getShiftSeller())
 
-  function setShiftSeller(creatorId: string) {
-    const next: ShiftSeller = { creatorId, setAt: new Date().toISOString() }
+  function setShiftSeller(name: string) {
+    const next: ShiftSeller = { name, setAt: new Date().toISOString() }
     store.saveShiftSeller(next)
     setShiftSellerState(next)
   }

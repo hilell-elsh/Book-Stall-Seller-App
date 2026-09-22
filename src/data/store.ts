@@ -163,7 +163,12 @@ export function saveSyncOutbox(ops: OutboxOp[]): void {
 // domain/shiftSeller.ts) — same bucket as deviceId/syncOutbox: never wired
 // into AppDataContext's persistX/outbox path, so it never syncs.
 export function getShiftSeller(): ShiftSeller | null {
-  return readJSON<ShiftSeller | null>(SHIFT_SELLER_KEY, null)
+  const raw = readJSON<ShiftSeller | null>(SHIFT_SELLER_KEY, null)
+  // ShiftSeller briefly shipped as { creatorId, setAt } before switching to
+  // plain free text ({ name, setAt }); a device that set it under the old
+  // shape would otherwise read back a name-less object. Never migrated (it's
+  // private/local-only, low stakes) — just degrade to unset.
+  return raw && typeof raw.name === 'string' ? raw : null
 }
 
 export function saveShiftSeller(shiftSeller: ShiftSeller | null): void {

@@ -35,6 +35,7 @@ export function RecordEditor({ record, onDone }: RecordEditorProps) {
       ...cart.evaluated,
       eventName,
       paymentMethodId,
+      paymentMethodName: paymentMethods.find((method) => method.id === paymentMethodId)?.name,
       receiver: receiver.trim(),
       manualDiscount: cart.manualDiscount ?? undefined,
       comment: cart.comment.trim() || undefined,

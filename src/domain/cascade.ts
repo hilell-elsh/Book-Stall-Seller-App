@@ -52,3 +52,42 @@ export function applyCreatorTombstone<T extends ItemLike>(items: T[], creatorId:
 export function isLive<T extends Tombstonable>(row: T): boolean {
   return !row.deletedAt
 }
+
+// Batch variants for sync-delivered tombstones: a local delete cascades
+// immediately via the single-row functions above, but a tombstone arriving
+// from another device via a Firestore pull lands as a plain field change
+// through LWW merge, with nothing re-running the cascade against it. Worse,
+// a race is possible where a concurrent item edit on another device carries
+// a later `updatedAt` than the cascade's own item tombstone/unlink, so LWW
+// picks the edit and the item silently reverts to referencing a
+// category/label/creator that's already gone. Re-applying the cascade
+// against every currently-tombstoned row on every pull self-heals that race
+// — each single-row function is idempotent (only touches items still
+// carrying the stale reference), so replaying already-applied tombstones is
+// harmless.
+export function applyCategoryTombstones<T extends ItemLike>(
+  items: T[],
+  categories: Tombstonable[],
+): T[] {
+  let result = items
+  for (const category of categories) {
+    if (category.deletedAt) result = applyCategoryTombstone(result, category.id, category.deletedAt)
+  }
+  return result
+}
+
+export function applyLabelTombstones<T extends ItemLike>(items: T[], labels: Tombstonable[]): T[] {
+  let result = items
+  for (const label of labels) {
+    if (label.deletedAt) result = applyLabelTombstone(result, label.id)
+  }
+  return result
+}
+
+export function applyCreatorTombstones<T extends ItemLike>(items: T[], creators: Tombstonable[]): T[] {
+  let result = items
+  for (const creator of creators) {
+    if (creator.deletedAt) result = applyCreatorTombstone(result, creator.id)
+  }
+  return result
+}

@@ -9,7 +9,15 @@ import {
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
 import type { EventNameRecord } from '../data/store'
-import { applyCategoryTombstone, applyCreatorTombstone, applyLabelTombstone, isLive } from '../domain/cascade'
+import {
+  applyCategoryTombstone,
+  applyCategoryTombstones,
+  applyCreatorTombstone,
+  applyCreatorTombstones,
+  applyLabelTombstone,
+  applyLabelTombstones,
+  isLive,
+} from '../domain/cascade'
 import { enqueue, enqueueSingleton } from '../sync/outbox'
 import { findLocalWins, mergeRows, resolveLastWriteWins } from '../sync/merge'
 import { startSyncPull } from '../sync/pull'
@@ -155,14 +163,40 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       })
     }
 
+    // Re-applies a cascade/unlink rule against the latest items state after a
+    // tombstone (or a stale reference the tombstone should have unlinked)
+    // arrives via pull — see cascade.ts's batch functions for why this must
+    // run on every pull, not just once. Reads via the functional setItems
+    // form for the same always-fresh reason applyRemoteRows does above.
+    function cascadeTombstonesToItems(cascade: (current: CatalogItem[]) => CatalogItem[]): void {
+      setItems((current) => {
+        const cascaded = cascade(current)
+        if (cascaded.every((item, i) => item === current[i])) return current
+        const updatedAt = now()
+        const next = cascaded.map((item, i) => (item !== current[i] ? { ...item, updatedAt } : item))
+        store.saveItems(next)
+        enqueue('items', current, next)
+        return next
+      })
+    }
+
     return startSyncPull({
-      categories: (rows) => applyRemoteRows('categories', rows, setCategories, store.saveCategories),
+      categories: (rows) => {
+        applyRemoteRows('categories', rows, setCategories, store.saveCategories)
+        cascadeTombstonesToItems((current) => applyCategoryTombstones(current, rows))
+      },
       items: (rows) => applyRemoteRows('items', rows, setItems, store.saveItems),
       discountRules: (rows) => applyRemoteRows('discountRules', rows, setDiscountRules, store.saveDiscountRules),
-      labels: (rows) => applyRemoteRows('labels', rows, setLabels, store.saveLabels),
+      labels: (rows) => {
+        applyRemoteRows('labels', rows, setLabels, store.saveLabels)
+        cascadeTombstonesToItems((current) => applyLabelTombstones(current, rows))
+      },
       saleRecords: (rows) => applyRemoteRows('saleRecords', rows, setSaleRecords, store.saveSaleRecords),
       paymentMethods: (rows) => applyRemoteRows('paymentMethods', rows, setPaymentMethods, store.savePaymentMethods),
-      creators: (rows) => applyRemoteRows('creators', rows, setCreators, store.saveCreators),
+      creators: (rows) => {
+        applyRemoteRows('creators', rows, setCreators, store.saveCreators)
+        cascadeTombstonesToItems((current) => applyCreatorTombstones(current, rows))
+      },
       eventName: (record) =>
         setEventNameRecord((current) => {
           const merged = resolveLastWriteWins(current, record)

@@ -118,6 +118,19 @@ describe('drainOutbox', () => {
     expect(fakeOutbox[0].lastError).toMatch(/timed out/)
   })
 
+  it('drains a large queue (500 ops) without dropping or duplicating any (Task 18)', async () => {
+    // Locks in correctness at scale for the sequential, un-batched design
+    // (drain.ts processes one op at a time, by choice — see the roadmap's
+    // Task 13 note on leaning on Firestore's own retry rather than hand-
+    // building batching/concurrency). This isn't testing performance, just
+    // that a large queue drains completely and cleanly.
+    const opCount = 500
+    fakeOutbox = Array.from({ length: opCount }, (_, i) => makeOp({ opId: `op-${i}`, entityId: `c${i}` }))
+    await drainOutbox()
+    expect(setDoc).toHaveBeenCalledTimes(opCount)
+    expect(fakeOutbox).toHaveLength(0)
+  })
+
   it('does not run two drains concurrently', async () => {
     let resolveFirst: () => void = () => {}
     setDoc.mockImplementationOnce(

@@ -207,46 +207,54 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // store.saveX runs first, deliberately (Task 18): it's the one step of the
+  // three that can throw (a full localStorage quota rejects synchronously,
+  // uncaught). Enqueue/setState used to run first, so a quota failure left
+  // React state and the outbox already updated while the actual entity
+  // array silently failed to persist — invisible until the next reload
+  // reverted the "successful" edit. Failing here first, before either of
+  // the other two run, means a storage failure leaves everything (state,
+  // outbox, storage) at the old value instead of partially applied.
   function persistCategories(next: Category[]) {
+    store.saveCategories(next)
     enqueue('categories', categories, next)
     setCategories(next)
-    store.saveCategories(next)
   }
 
   function persistItems(next: CatalogItem[]) {
+    store.saveItems(next)
     enqueue('items', items, next)
     setItems(next)
-    store.saveItems(next)
   }
 
   function persistDiscountRules(next: DiscountRule[]) {
+    store.saveDiscountRules(next)
     enqueue('discountRules', discountRules, next)
     setDiscountRules(next)
-    store.saveDiscountRules(next)
   }
 
   function persistLabels(next: Label[]) {
+    store.saveLabels(next)
     enqueue('labels', labels, next)
     setLabels(next)
-    store.saveLabels(next)
   }
 
   function persistSaleRecords(next: SaleRecord[]) {
+    store.saveSaleRecords(next)
     enqueue('saleRecords', saleRecords, next)
     setSaleRecords(next)
-    store.saveSaleRecords(next)
   }
 
   function persistPaymentMethods(next: PaymentMethod[]) {
+    store.savePaymentMethods(next)
     enqueue('paymentMethods', paymentMethods, next)
     setPaymentMethods(next)
-    store.savePaymentMethods(next)
   }
 
   function persistCreators(next: Creator[]) {
+    store.saveCreators(next)
     enqueue('creators', creators, next)
     setCreators(next)
-    store.saveCreators(next)
   }
 
   function addCategory(name: string) {
@@ -503,9 +511,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function setEventName(name: string) {
     const next: EventNameRecord = { name, updatedAt: now() }
+    store.saveEventName(next)
     enqueueSingleton('eventName', 'main', eventNameRecord, next)
     setEventNameRecord(next)
-    store.saveEventName(next)
   }
 
   const value = useMemo<AppDataContextValue>(

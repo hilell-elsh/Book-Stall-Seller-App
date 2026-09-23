@@ -9,6 +9,8 @@
     "build:dev": "tsc -b && vite build --mode development",
     "build:offline": "tsc -b && vite build --config vite.config.offline.ts",
     "build:offline:demo": "tsc -b && VITE_SEED_DEMO=true vite build --config vite.config.offline.ts --outDir dist-offline-demo",
+    "deploy:prod": "npm run build && firebase deploy --only hosting,firestore:rules --project prod",
+    "deploy:dev": "npm run build:dev && firebase deploy --only hosting,firestore:rules --project dev",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run"
@@ -24,6 +26,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "firebase-tools": "^15.30.2",
     "oxlint": "^1.79.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

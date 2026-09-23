@@ -34,3 +34,6 @@ dist-offline-demo
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase CLI local deploy cache (Task 20)
+.firebase/

@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import { isSyncConfigured } from '../sync/firebaseConfig'
+import { SyncStatusBadge } from './SyncStatusBadge'
 
 export type TabId = 'sale' | 'config' | 'records'
 
@@ -157,6 +159,11 @@ export function SideNav({ active, onChange }: SideNavProps) {
           <MenuIcon />
         </button>
         <span className="text-base font-semibold">{activeLabel}</span>
+        {isSyncConfigured && (
+          <span className="ms-auto">
+            <SyncStatusBadge />
+          </span>
+        )}
       </div>
 
       <nav className="hidden shrink-0 flex-col gap-1 border-e border-line bg-surface p-3 sm:flex sm:w-52">
@@ -168,6 +175,11 @@ export function SideNav({ active, onChange }: SideNavProps) {
             onClick={() => handleSelect(tab.id)}
           />
         ))}
+        {isSyncConfigured && (
+          <div className="mt-auto border-t border-line pt-2">
+            <SyncStatusBadge />
+          </div>
+        )}
       </nav>
 
       {mobileOpen && (

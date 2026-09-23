@@ -25,9 +25,12 @@ export function RecordList({ records, expandedId, onToggle, onCloseExpanded }: R
     <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
       {sorted.map((record) => {
         const itemCount = record.lines.reduce((sum, line) => sum + line.qty, 0)
-        const paymentMethodName = record.paymentMethodId
-          ? paymentMethodById.get(record.paymentMethodId)?.name
-          : undefined
+        // Prefer the snapshot taken at sale time; older records saved before
+        // it existed fall back to a live lookup, which can go stale if the
+        // method is later deleted/renamed elsewhere (the gap this snapshot closes).
+        const paymentMethodName =
+          record.paymentMethodName ??
+          (record.paymentMethodId ? paymentMethodById.get(record.paymentMethodId)?.name : undefined)
         const details = [
           `${itemCount} פריטים`,
           paymentMethodName,

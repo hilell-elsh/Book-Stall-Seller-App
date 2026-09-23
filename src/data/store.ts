@@ -5,6 +5,8 @@ import type { Label } from '../types/label'
 import type { PaymentMethod } from '../types/paymentMethod'
 import type { SaleRecord } from '../types/sale'
 import type { ItemSelector } from '../types/selector'
+import type { ShiftSeller } from '../domain/shiftSeller'
+import type { OutboxOp } from '../sync/outbox'
 import { readJSON, writeJSON } from './localStorageDriver'
 
 const CATEGORIES_KEY = 'categories'
@@ -15,6 +17,8 @@ const SALE_RECORDS_KEY = 'saleRecords'
 const PAYMENT_METHODS_KEY = 'paymentMethods'
 const CREATORS_KEY = 'creators'
 const EVENT_NAME_KEY = 'eventName'
+const SYNC_OUTBOX_KEY = 'syncOutbox'
+const SHIFT_SELLER_KEY = 'shiftSeller'
 
 export function getCategories(): Category[] {
   return readJSON<Category[]>(CATEGORIES_KEY, [])
@@ -124,10 +128,49 @@ export function saveCreators(creators: Creator[]): void {
   writeJSON(CREATORS_KEY, creators)
 }
 
-export function getEventName(): string {
-  return readJSON<string>(EVENT_NAME_KEY, '')
+export interface EventNameRecord {
+  name: string
+  updatedAt: string
 }
 
-export function saveEventName(name: string): void {
-  writeJSON(EVENT_NAME_KEY, name)
+// Pre-Phase-2 data stored a bare string with no updatedAt; normalize it into
+// the timestamped shape LWW sync needs, same "default on read" convention as
+// every other field added to a persisted type. The epoch timestamp means any
+// real remote value will always be treated as newer.
+export function getEventName(): EventNameRecord {
+  const raw = readJSON<string | EventNameRecord>(EVENT_NAME_KEY, { name: '', updatedAt: new Date(0).toISOString() })
+  if (typeof raw === 'string') {
+    return { name: raw, updatedAt: new Date(0).toISOString() }
+  }
+  return raw
+}
+
+export function saveEventName(record: EventNameRecord): void {
+  writeJSON(EVENT_NAME_KEY, record)
+}
+
+// Sync bookkeeping only — private/device-local, never itself synced (same
+// bucket as deviceId and the stall PIN session).
+export function getSyncOutbox(): OutboxOp[] {
+  return readJSON<OutboxOp[]>(SYNC_OUTBOX_KEY, [])
+}
+
+export function saveSyncOutbox(ops: OutboxOp[]): void {
+  writeJSON(SYNC_OUTBOX_KEY, ops)
+}
+
+// Private, device-local "who's on shift here" setting (see
+// domain/shiftSeller.ts) — same bucket as deviceId/syncOutbox: never wired
+// into AppDataContext's persistX/outbox path, so it never syncs.
+export function getShiftSeller(): ShiftSeller | null {
+  const raw = readJSON<ShiftSeller | null>(SHIFT_SELLER_KEY, null)
+  // ShiftSeller briefly shipped as { creatorId, setAt } before switching to
+  // plain free text ({ name, setAt }); a device that set it under the old
+  // shape would otherwise read back a name-less object. Never migrated (it's
+  // private/local-only, low stakes) — just degrade to unset.
+  return raw && typeof raw.name === 'string' ? raw : null
+}
+
+export function saveShiftSeller(shiftSeller: ShiftSeller | null): void {
+  writeJSON(SHIFT_SELLER_KEY, shiftSeller)
 }

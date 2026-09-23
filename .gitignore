@@ -16,6 +16,13 @@ dist-offline-demo
 *.html
 !index.html
 *.local
+.env
+.env.*
+!.env.example
+
+# Claude Code local-only files (project-scoped .claude/ is otherwise committed)
+.claude/settings.local.json
+.claude/.verify-ok
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +34,6 @@ dist-offline-demo
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase CLI local deploy cache (Task 20)
+.firebase/

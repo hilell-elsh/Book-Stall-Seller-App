@@ -57,9 +57,13 @@ export function buildSalesCsvRows(
 
   const dataRows: string[][] = []
   for (const record of records) {
-    const paymentMethodName = record.paymentMethodId
-      ? (paymentMethodById.get(record.paymentMethodId)?.name ?? '')
-      : ''
+    // Prefer the snapshot taken at sale time; older records saved before it
+    // existed fall back to a live lookup, which can go stale if the method
+    // is later deleted/renamed elsewhere (the gap this snapshot closes).
+    const paymentMethodName =
+      record.paymentMethodName ??
+      (record.paymentMethodId ? paymentMethodById.get(record.paymentMethodId)?.name : undefined) ??
+      ''
 
     const itemCells = new Array(itemColumns.length).fill('')
     for (const line of record.lines) {
@@ -178,9 +182,13 @@ export function buildPaymentReportRows(
 
   const byMethodReceiver = new Map<string, { methodName: string; receiver: string; agorot: number }>()
   for (const record of records) {
-    const methodName = record.paymentMethodId
-      ? (paymentMethodById.get(record.paymentMethodId)?.name ?? '')
-      : ''
+    // Prefer the snapshot taken at sale time; older records saved before it
+    // existed fall back to a live lookup, which can go stale if the method
+    // is later deleted/renamed elsewhere (the gap this snapshot closes).
+    const methodName =
+      record.paymentMethodName ??
+      (record.paymentMethodId ? paymentMethodById.get(record.paymentMethodId)?.name : undefined) ??
+      ''
     const receiver = record.receiver ?? ''
     const key = `${methodName} ${receiver}`
     const existing = byMethodReceiver.get(key)

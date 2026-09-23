@@ -16,9 +16,14 @@ export function RecordDetails({ record, onEdit, onClose }: RecordDetailsProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const payouts = computeCreatorPayouts(record)
 
-  const paymentMethodName = record.paymentMethodId
-    ? paymentMethods.find((method) => method.id === record.paymentMethodId)?.name
-    : undefined
+  // Prefer the snapshot taken at sale time; older records saved before it
+  // existed fall back to a live lookup, which can go stale if the method is
+  // later deleted/renamed elsewhere (the gap this snapshot closes).
+  const paymentMethodName =
+    record.paymentMethodName ??
+    (record.paymentMethodId
+      ? paymentMethods.find((method) => method.id === record.paymentMethodId)?.name
+      : undefined)
 
   function handleDelete() {
     deleteSaleRecord(record.id)

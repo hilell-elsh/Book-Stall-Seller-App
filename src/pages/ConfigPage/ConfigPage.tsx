@@ -1,15 +1,19 @@
 import { useState } from 'react'
 import { CategoryManager } from './CategoryManager'
 import { CreatorManager } from './CreatorManager'
+import { DebugLogPanel } from './DebugLogPanel'
 import { DiscountRuleManager } from './DiscountRuleManager'
 import { EventSettings } from './EventSettings'
 import { ItemManager } from './ItemManager'
 import { LabelManager } from './LabelManager'
 import { PaymentMethodManager } from './PaymentMethodManager'
+import { ShiftSellerSettings } from './ShiftSellerSettings'
+import { SyncStatusPanel } from './SyncStatusPanel'
 
-type Section = 'items' | 'discounts' | 'categories' | 'labels' | 'payments' | 'creators'
+type Section = 'general' | 'items' | 'discounts' | 'categories' | 'labels' | 'payments' | 'creators'
 
 const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'general', label: 'כללי' },
   { id: 'items', label: 'פריטים' },
   { id: 'discounts', label: 'מבצעים' },
   { id: 'categories', label: 'קטגוריות' },
@@ -19,15 +23,11 @@ const SECTIONS: { id: Section; label: string }[] = [
 ]
 
 export function ConfigPage() {
-  const [section, setSection] = useState<Section>('items')
+  const [section, setSection] = useState<Section>('general')
 
   return (
     <div className="mx-auto max-w-2xl p-4 pb-8">
       <h1 className="text-lg font-semibold">הגדרות</h1>
-
-      <div className="mt-3">
-        <EventSettings />
-      </div>
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
         {SECTIONS.map((s) => (
@@ -47,6 +47,14 @@ export function ConfigPage() {
       </div>
 
       <div className="mt-3">
+        {section === 'general' && (
+          <div className="space-y-3">
+            <EventSettings />
+            <ShiftSellerSettings />
+            <SyncStatusPanel />
+            <DebugLogPanel />
+          </div>
+        )}
         {section === 'items' && <ItemManager />}
         {section === 'discounts' && <DiscountRuleManager />}
         {section === 'categories' && <CategoryManager />}

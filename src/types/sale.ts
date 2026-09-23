@@ -37,8 +37,14 @@ export interface SaleRecord {
   id: string
   createdAt: string
   updatedAt: string
+  deletedAt?: string
   eventName: string
   paymentMethodId?: string
+  // Snapshotted at sale time, same idea as itemName/categoryName on
+  // SaleLineItem: paymentMethodId is a live reference, so a payment method
+  // deleted later (possibly on another device, post-sync) would otherwise
+  // corrupt historical reports everywhere instead of just locally.
+  paymentMethodName?: string
   receiver?: string
   lines: SaleLineItem[]
   discounts: AppliedDiscount[]

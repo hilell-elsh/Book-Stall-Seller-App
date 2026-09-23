@@ -22,6 +22,7 @@ interface DiscountRuleBase {
   stackable: boolean
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }
 
 export interface StepDiscountRule extends DiscountRuleBase {

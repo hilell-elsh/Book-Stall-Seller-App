@@ -123,5 +123,5 @@ export function seedDemoDataIfEmpty(): void {
   store.saveCreators(creators)
   store.savePaymentMethods(paymentMethods)
   store.saveItems(items)
-  store.saveEventName('יריד ניסיון (דמו)')
+  store.saveEventName({ name: 'יריד ניסיון (דמו)', updatedAt: now })
 }

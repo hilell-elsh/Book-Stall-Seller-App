@@ -1,12 +1,26 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { newId } from '../domain/ids'
 import * as store from '../data/store'
+import type { EventNameRecord } from '../data/store'
+import {
+  applyCategoryTombstone,
+  applyCategoryTombstones,
+  applyCreatorTombstone,
+  applyCreatorTombstones,
+  applyLabelTombstone,
+  applyLabelTombstones,
+  isLive,
+} from '../domain/cascade'
+import { enqueue, enqueueSingleton } from '../sync/outbox'
+import { findLocalWins, mergeRows, resolveLastWriteWins } from '../sync/merge'
+import { startSyncPull } from '../sync/pull'
 import type { Category, CatalogItem, CreatorShare } from '../types/catalog'
 import type { Creator } from '../types/creator'
 import type { DiscountRule, DiscountRuleDraft } from '../types/discount'
@@ -107,46 +121,146 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     store.getPaymentMethods(),
   )
   const [creators, setCreators] = useState<Creator[]>(() => store.getCreators())
-  const [eventName, setEventNameState] = useState<string>(() => store.getEventName())
+  const [eventNameRecord, setEventNameRecord] = useState<EventNameRecord>(() => store.getEventName())
 
+  // Inbound path: another device's push arrives here via Firestore's own
+  // snapshot listeners (see sync/pull.ts). Firestore's stored document is
+  // just whatever setDoc() last overwrote it with — decided by network
+  // arrival order, not by updatedAt — so a real LWW guarantee only holds if,
+  // whenever this merge picks the local row over a stale/racing remote one,
+  // that winning row gets pushed back to correct Firestore too. Without
+  // this, two devices that raced offline could disagree forever, surviving
+  // refreshes, since neither's "locally correct" view ever overwrites the
+  // other's stale server copy.
+  //
+  // Uses the functional setState form deliberately: an earlier version read
+  // "current" from a ref mirrored via a separate effect, to avoid calling
+  // enqueue() (a side effect) inside a setState updater. That was a real
+  // production bug — Firestore's onSnapshot can fire within milliseconds of
+  // a local write (its local cache echoes back almost immediately, often
+  // before the mirroring effect's next run), so the ref was frequently
+  // stale, and the resulting merge would silently overwrite a just-made
+  // local edit with an outbox correction computed from stale data (e.g. a
+  // creator added right before a snapshot fired would vanish again). The
+  // functional form is guaranteed fresh. The tradeoff — React's StrictMode
+  // double-invokes updaters in dev to catch impurities like this enqueue()
+  // call — only affects `npm run dev`, never production builds, and even
+  // there a doubled correction just re-pushes the same already-correct row
+  // (harmless, not a correctness bug).
+  useEffect(() => {
+    function applyRemoteRows<T extends { id: string; updatedAt: string }>(
+      entity: string,
+      rows: T[],
+      setState: (updater: (current: T[]) => T[]) => void,
+      saveState: (rows: T[]) => void,
+    ): void {
+      setState((current) => {
+        const merged = mergeRows(current, rows)
+        saveState(merged)
+        const corrections = findLocalWins(rows, merged)
+        if (corrections.length > 0) enqueue(entity, rows, corrections)
+        return merged
+      })
+    }
+
+    // Re-applies a cascade/unlink rule against the latest items state after a
+    // tombstone (or a stale reference the tombstone should have unlinked)
+    // arrives via pull — see cascade.ts's batch functions for why this must
+    // run on every pull, not just once. Reads via the functional setItems
+    // form for the same always-fresh reason applyRemoteRows does above.
+    function cascadeTombstonesToItems(cascade: (current: CatalogItem[]) => CatalogItem[]): void {
+      setItems((current) => {
+        const cascaded = cascade(current)
+        if (cascaded.every((item, i) => item === current[i])) return current
+        const updatedAt = now()
+        const next = cascaded.map((item, i) => (item !== current[i] ? { ...item, updatedAt } : item))
+        store.saveItems(next)
+        enqueue('items', current, next)
+        return next
+      })
+    }
+
+    return startSyncPull({
+      categories: (rows) => {
+        applyRemoteRows('categories', rows, setCategories, store.saveCategories)
+        cascadeTombstonesToItems((current) => applyCategoryTombstones(current, rows))
+      },
+      items: (rows) => applyRemoteRows('items', rows, setItems, store.saveItems),
+      discountRules: (rows) => applyRemoteRows('discountRules', rows, setDiscountRules, store.saveDiscountRules),
+      labels: (rows) => {
+        applyRemoteRows('labels', rows, setLabels, store.saveLabels)
+        cascadeTombstonesToItems((current) => applyLabelTombstones(current, rows))
+      },
+      saleRecords: (rows) => applyRemoteRows('saleRecords', rows, setSaleRecords, store.saveSaleRecords),
+      paymentMethods: (rows) => applyRemoteRows('paymentMethods', rows, setPaymentMethods, store.savePaymentMethods),
+      creators: (rows) => {
+        applyRemoteRows('creators', rows, setCreators, store.saveCreators)
+        cascadeTombstonesToItems((current) => applyCreatorTombstones(current, rows))
+      },
+      eventName: (record) =>
+        setEventNameRecord((current) => {
+          const merged = resolveLastWriteWins(current, record)
+          store.saveEventName(merged)
+          if (merged !== record) enqueueSingleton('eventName', 'main', record, merged)
+          return merged
+        }),
+    })
+  }, [])
+
+  // store.saveX runs first, deliberately (Task 18): it's the one step of the
+  // three that can throw (a full localStorage quota rejects synchronously,
+  // uncaught). Enqueue/setState used to run first, so a quota failure left
+  // React state and the outbox already updated while the actual entity
+  // array silently failed to persist — invisible until the next reload
+  // reverted the "successful" edit. Failing here first, before either of
+  // the other two run, means a storage failure leaves everything (state,
+  // outbox, storage) at the old value instead of partially applied.
   function persistCategories(next: Category[]) {
-    setCategories(next)
     store.saveCategories(next)
+    enqueue('categories', categories, next)
+    setCategories(next)
   }
 
   function persistItems(next: CatalogItem[]) {
-    setItems(next)
     store.saveItems(next)
+    enqueue('items', items, next)
+    setItems(next)
   }
 
   function persistDiscountRules(next: DiscountRule[]) {
-    setDiscountRules(next)
     store.saveDiscountRules(next)
+    enqueue('discountRules', discountRules, next)
+    setDiscountRules(next)
   }
 
   function persistLabels(next: Label[]) {
-    setLabels(next)
     store.saveLabels(next)
+    enqueue('labels', labels, next)
+    setLabels(next)
   }
 
   function persistSaleRecords(next: SaleRecord[]) {
-    setSaleRecords(next)
     store.saveSaleRecords(next)
+    enqueue('saleRecords', saleRecords, next)
+    setSaleRecords(next)
   }
 
   function persistPaymentMethods(next: PaymentMethod[]) {
-    setPaymentMethods(next)
     store.savePaymentMethods(next)
+    enqueue('paymentMethods', paymentMethods, next)
+    setPaymentMethods(next)
   }
 
   function persistCreators(next: Creator[]) {
-    setCreators(next)
     store.saveCreators(next)
+    enqueue('creators', creators, next)
+    setCreators(next)
   }
 
   function addCategory(name: string) {
-    const nextOrder = categories.length
-      ? Math.max(...categories.map((c) => c.order)) + 1
+    const liveCategories = categories.filter(isLive)
+    const nextOrder = liveCategories.length
+      ? Math.max(...liveCategories.map((c) => c.order)) + 1
       : 0
     const category: Category = {
       id: newId(),
@@ -164,19 +278,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Soft-delete: the category row and its items stay, tombstoned via
+  // deletedAt, so a pulled delete never leaves another device's concurrent
+  // edit pointing at a vanished id (see cascade.ts).
   function deleteCategory(id: string) {
-    persistCategories(categories.filter((c) => c.id !== id))
-    persistItems(items.filter((item) => item.categoryId !== id))
+    const deletedAt = now()
+    persistCategories(
+      categories.map((c) => (c.id === id ? { ...c, deletedAt } : c)),
+    )
+    const cascaded = applyCategoryTombstone(items, id, deletedAt)
+    persistItems(cascaded.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function moveCategory(id: string, direction: 'up' | 'down') {
-    persistCategories(reorder(categories, id, direction))
+    const tombstoned = categories.filter((c) => !isLive(c))
+    persistCategories([...reorder(categories.filter(isLive), id, direction), ...tombstoned])
   }
 
   function addItem(categoryId: string, name: string, price: number) {
-    const siblings = items.filter((item) => item.categoryId === categoryId)
-    const nextOrder = siblings.length
-      ? Math.max(...siblings.map((item) => item.order)) + 1
+    const liveSiblings = items.filter((item) => item.categoryId === categoryId && isLive(item))
+    const nextOrder = liveSiblings.length
+      ? Math.max(...liveSiblings.map((item) => item.order)) + 1
       : 0
     const item: CatalogItem = {
       id: newId(),
@@ -207,15 +329,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteItem(id: string) {
-    persistItems(items.filter((item) => item.id !== id))
+    persistItems(items.map((item) => (item.id === id ? { ...item, deletedAt: now() } : item)))
   }
 
   function changeItemCategory(id: string, categoryId: string) {
     const item = items.find((entry) => entry.id === id)
     if (!item || item.categoryId === categoryId) return
-    const siblings = items.filter((entry) => entry.categoryId === categoryId)
-    const nextOrder = siblings.length
-      ? Math.max(...siblings.map((entry) => entry.order)) + 1
+    const liveSiblings = items.filter((entry) => entry.categoryId === categoryId && isLive(entry))
+    const nextOrder = liveSiblings.length
+      ? Math.max(...liveSiblings.map((entry) => entry.order)) + 1
       : 0
     persistItems(
       items.map((entry) =>
@@ -229,14 +351,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function moveItem(id: string, direction: 'up' | 'down') {
     const item = items.find((entry) => entry.id === id)
     if (!item) return
-    const siblings = items.filter((entry) => entry.categoryId === item.categoryId)
-    const others = items.filter((entry) => entry.categoryId !== item.categoryId)
-    persistItems([...others, ...reorder(siblings, id, direction)])
+    const liveSiblings = items.filter((entry) => entry.categoryId === item.categoryId && isLive(entry))
+    const others = items.filter((entry) => entry.categoryId !== item.categoryId || !isLive(entry))
+    persistItems([...others, ...reorder(liveSiblings, id, direction)])
   }
 
   function addDiscountRule(draft: DiscountRuleDraft) {
-    const nextOrder = discountRules.length
-      ? Math.max(...discountRules.map((rule) => rule.order)) + 1
+    const liveRules = discountRules.filter(isLive)
+    const nextOrder = liveRules.length
+      ? Math.max(...liveRules.map((rule) => rule.order)) + 1
       : 0
     const rule = {
       ...draft,
@@ -265,7 +388,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteDiscountRule(id: string) {
-    persistDiscountRules(discountRules.filter((rule) => rule.id !== id))
+    persistDiscountRules(
+      discountRules.map((rule) => (rule.id === id ? { ...rule, deletedAt: now() } : rule)),
+    )
   }
 
   function toggleDiscountRule(id: string) {
@@ -277,7 +402,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function moveDiscountRule(id: string, direction: 'up' | 'down') {
-    persistDiscountRules(reorder(discountRules, id, direction))
+    const tombstoned = discountRules.filter((rule) => !isLive(rule))
+    persistDiscountRules([...reorder(discountRules.filter(isLive), id, direction), ...tombstoned])
   }
 
   function addLabel(name: string) {
@@ -292,15 +418,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteLabel(id: string) {
-    persistLabels(labels.filter((label) => label.id !== id))
+    const deletedAt = now()
+    persistLabels(labels.map((label) => (label.id === id ? { ...label, deletedAt } : label)))
     // Unlink rather than cascade-delete: removing a label shouldn't remove the items wearing it.
-    persistItems(
-      items.map((item) =>
-        item.labelIds.includes(id)
-          ? { ...item, labelIds: item.labelIds.filter((labelId) => labelId !== id), updatedAt: now() }
-          : item,
-      ),
-    )
+    const unlinked = applyLabelTombstone(items, id)
+    persistItems(unlinked.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function toggleItemLabel(itemId: string, labelId: string) {
@@ -340,7 +462,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteSaleRecord(id: string) {
-    persistSaleRecords(saleRecords.filter((record) => record.id !== id))
+    persistSaleRecords(
+      saleRecords.map((record) => (record.id === id ? { ...record, deletedAt: now() } : record)),
+    )
   }
 
   function addPaymentMethod(name: string) {
@@ -357,7 +481,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deletePaymentMethod(id: string) {
-    persistPaymentMethods(paymentMethods.filter((method) => method.id !== id))
+    persistPaymentMethods(
+      paymentMethods.map((method) => (method.id === id ? { ...method, deletedAt: now() } : method)),
+    )
   }
 
   function addCreator(name: string) {
@@ -372,19 +498,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteCreator(id: string) {
-    persistCreators(creators.filter((creator) => creator.id !== id))
+    const deletedAt = now()
+    persistCreators(creators.map((creator) => (creator.id === id ? { ...creator, deletedAt } : creator)))
     // Unlink rather than block: removing a creator shouldn't strand an item's remaining shares.
-    persistItems(
-      items.map((item) =>
-        item.creatorShares.some((share) => share.creatorId === id)
-          ? {
-              ...item,
-              creatorShares: item.creatorShares.filter((share) => share.creatorId !== id),
-              updatedAt: now(),
-            }
-          : item,
-      ),
-    )
+    const unlinked = applyCreatorTombstone(items, id)
+    persistItems(unlinked.map((item, i) => (item !== items[i] ? { ...item, updatedAt: deletedAt } : item)))
   }
 
   function setItemCreatorShares(itemId: string, shares: CreatorShare[]) {
@@ -392,14 +510,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function setEventName(name: string) {
-    setEventNameState(name)
-    store.saveEventName(name)
+    const next: EventNameRecord = { name, updatedAt: now() }
+    store.saveEventName(next)
+    enqueueSingleton('eventName', 'main', eventNameRecord, next)
+    setEventNameRecord(next)
   }
 
   const value = useMemo<AppDataContextValue>(
     () => ({
-      categories: sortByOrder(categories),
-      items: sortByOrder(items),
+      categories: sortByOrder(categories.filter(isLive)),
+      items: sortByOrder(items.filter(isLive)),
       addCategory,
       renameCategory,
       deleteCategory,
@@ -409,35 +529,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       deleteItem,
       moveItem,
       changeItemCategory,
-      discountRules: sortByOrder(discountRules),
+      discountRules: sortByOrder(discountRules.filter(isLive)),
       addDiscountRule,
       updateDiscountRule,
       deleteDiscountRule,
       toggleDiscountRule,
       moveDiscountRule,
-      labels,
+      labels: labels.filter(isLive),
       addLabel,
       renameLabel,
       deleteLabel,
       toggleItemLabel,
       toggleItemActive,
-      saleRecords,
+      saleRecords: saleRecords.filter(isLive),
       addSaleRecord,
       updateSaleRecord,
       deleteSaleRecord,
-      paymentMethods,
+      paymentMethods: paymentMethods.filter(isLive),
       addPaymentMethod,
       renamePaymentMethod,
       deletePaymentMethod,
-      creators,
+      creators: creators.filter(isLive),
       addCreator,
       renameCreator,
       deleteCreator,
       setItemCreatorShares,
-      eventName,
+      eventName: eventNameRecord.name,
       setEventName,
     }),
-    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators, eventName],
+    [categories, items, discountRules, labels, saleRecords, paymentMethods, creators, eventNameRecord],
   )
 
   return (

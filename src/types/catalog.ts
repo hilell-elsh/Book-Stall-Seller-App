@@ -4,6 +4,7 @@ export interface Category {
   order: number
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }
 
 export interface CreatorShare {
@@ -22,4 +23,5 @@ export interface CatalogItem {
   creatorShares: CreatorShare[]
   createdAt: string
   updatedAt: string
+  deletedAt?: string
 }

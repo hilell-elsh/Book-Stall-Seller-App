@@ -6,7 +6,9 @@ import { MobileCartBar } from '../components/cart/MobileCartBar'
 import { PaymentSelector } from '../components/cart/PaymentSelector'
 import { SaleSummary } from '../components/cart/SaleSummary'
 import { useAppData } from '../context/AppDataContext'
+import { defaultReceiverForShiftSeller } from '../domain/shiftSeller'
 import type { CartState } from '../hooks/useCartState'
+import { useShiftSeller } from '../hooks/useShiftSeller'
 
 interface SalePageProps {
   cart: CartState
@@ -15,12 +17,31 @@ interface SalePageProps {
 export function SalePage({ cart }: SalePageProps) {
   const { categories, items, labels, creators, paymentMethods, eventName, addSaleRecord } =
     useAppData()
+  // Read-only here — set from the Settings page (ShiftSellerSettings) so
+  // picking it happens once per shift, before selling starts, rather than
+  // via a control living in the middle of an in-progress sale.
+  const { shiftSeller } = useShiftSeller()
+
+  // The shift seller is free text and isn't necessarily one of the
+  // creators, so the receiver picker (a creators dropdown + "other" free
+  // text) needs to know whether its default lands in "other" mode too.
+  function resolveShiftSellerDefault(): { receiver: string; isCustomReceiver: boolean } {
+    const name = defaultReceiverForShiftSeller(shiftSeller)
+    return { receiver: name, isCustomReceiver: name !== '' && !creators.some((creator) => creator.name === name) }
+  }
+
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [receiver, setReceiver] = useState('')
+  const [receiver, setReceiver] = useState(() => resolveShiftSellerDefault().receiver)
+  const [isCustomReceiver, setIsCustomReceiver] = useState(() => resolveShiftSellerDefault().isCustomReceiver)
   const cartSectionRef = useRef<HTMLDivElement>(null)
 
   const canSave = cart.lines.length > 0 && paymentMethodId !== '' && receiver.trim() !== ''
   const hasItems = cart.lines.length > 0
+
+  function handleReceiverChange(name: string, isCustom: boolean) {
+    setReceiver(name)
+    setIsCustomReceiver(isCustom)
+  }
 
   function handleSave() {
     if (!canSave) return
@@ -28,13 +49,16 @@ export function SalePage({ cart }: SalePageProps) {
       ...cart.evaluated,
       eventName,
       paymentMethodId,
+      paymentMethodName: paymentMethods.find((method) => method.id === paymentMethodId)?.name,
       receiver: receiver.trim(),
       manualDiscount: cart.manualDiscount ?? undefined,
       comment: cart.comment.trim() || undefined,
     })
     cart.clear()
     setPaymentMethodId('')
-    setReceiver('')
+    const shiftDefault = resolveShiftSellerDefault()
+    setReceiver(shiftDefault.receiver)
+    setIsCustomReceiver(shiftDefault.isCustomReceiver)
   }
 
   function scrollToCart() {
@@ -86,9 +110,11 @@ export function SalePage({ cart }: SalePageProps) {
         <PaymentSelector
           paymentMethods={paymentMethods}
           paymentMethodId={paymentMethodId}
+          creators={creators}
           receiver={receiver}
+          isCustomReceiver={isCustomReceiver}
           onPaymentMethodChange={setPaymentMethodId}
-          onReceiverChange={setReceiver}
+          onReceiverChange={handleReceiverChange}
           onSubmit={handleSave}
         />
         <SaleSummary

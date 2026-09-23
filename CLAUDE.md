@@ -20,10 +20,12 @@ All standard commands are in `package.json`'s `scripts`. Two things not obvious 
 
 ## Deploy (`firebase.json`, `.firebaserc`, Phase 2 Task 20)
 
-Two fully separate Firebase projects, each with its own Hosting site, Firestore, and shared stall Auth account — dev testing never touches real sale data:
+Two fully separate Firebase projects, each with its own Hosting site, Firestore, and shared stall Auth account — dev testing never touches real sale data. Deploys are manual for now (no CI/CD yet — see below).
 
 - **prod** (`stall-8e1fc`) — built from the `main` branch. `npm run deploy:prod` (`npm run build` → `firebase deploy --only hosting,firestore:rules --project prod`). Uses `.env.local`'s values (the base env file, unchanged by this task).
-- **dev** (`stall-8e1fc-dev`) — built from the `dev` branch (fast-forwarded/merged from `phase2` whenever it's time to push a new dev build — `phase2` itself keeps being where Phase 2 task work lands, same relationship `main` already has to prod). `npm run deploy:dev` (`npm run build:dev` → `vite build --mode development`, which layers `.env.development.local`'s values on top of `.env.local` → `firebase deploy --only hosting,firestore:rules --project dev`).
+- **dev** (`stall-8e1fc-dev`) — built from the `dev` branch. `npm run deploy:dev` (`npm run build:dev` → `vite build --mode development`, which layers `.env.development.local`'s values on top of `.env.local` → `firebase deploy --only hosting,firestore:rules --project dev`).
+
+**Branch flow**: feature branches (`phase2`, and future ones) merge into `dev` → `dev` merges into `main` when a batch of work is ready for prod. This is the *only* way `main` picks up the deploy tooling above (`firebase.json`/`.firebaserc`/the `deploy:*`/`build:dev` scripts) — they were added on `phase2`/`dev` only; nothing was cherry-picked or otherwise pushed onto `main` directly, and nothing should be until an actual `dev → main` merge happens.
 
 Firebase Hosting is a static-file host, not a build/git/container service: `firebase deploy` just uploads whatever's already in `dist/` (the plain multi-file `npm run build` output — never `dist-offline/`, which stays a separate no-internet fallback, see "Known gap" above) straight to Firebase's CDN. Each deploy is a new "release" in Hosting's history; `firebase hosting:rollback --project <prod|dev>` reverts instantly with no rebuild. `firebase.json`'s SPA rewrite (`** → /index.html`) is a no-op today (no client-side routing exists) but costs nothing and future-proofs it.
 

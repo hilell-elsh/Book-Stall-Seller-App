@@ -24,6 +24,18 @@ function truncate(message: string): string {
   return message.length > MAX_MESSAGE_LENGTH ? message.slice(0, MAX_MESSAGE_LENGTH) + '…' : message
 }
 
+// The Firestore SDK's own WebChannel reconnect chatter (backgrounded tab,
+// phone sleep/wake, network handoff) logs a console.warn on every dropped
+// stream, with no diagnostic content (Name/Message are always empty) and no
+// bearing on data correctness — the SDK reconnects and drains on its own
+// (see drain.ts). Left uncaptured so it can't crowd out real failures in the
+// fixed 200-entry ring buffer; still visible in the browser's own console.
+const NOISY_WARNING_PATTERNS = [/WebChannelConnection .* transport errored/]
+
+function isNoisyWarning(message: string): boolean {
+  return NOISY_WARNING_PATTERNS.some((pattern) => pattern.test(message))
+}
+
 let entries: LogEntry[] = readJSON<LogEntry[]>(STORAGE_KEY, [])
 const listeners = new Set<() => void>()
 
@@ -97,7 +109,8 @@ export function installGlobalErrorLogging(): void {
 
   const originalWarn = console.warn
   console.warn = (...args: unknown[]) => {
-    appendLogEntry('console.warn', stringifyArgs(args))
+    const message = stringifyArgs(args)
+    if (!isNoisyWarning(message)) appendLogEntry('console.warn', message)
     originalWarn(...args)
   }
 

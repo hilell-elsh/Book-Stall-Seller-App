@@ -9,9 +9,17 @@ const fakeLocalStorage = {
 }
 // @ts-expect-error -- minimal localStorage stand-in for a Node test environment
 globalThis.localStorage = fakeLocalStorage
+// @ts-expect-error -- minimal window stand-in so installGlobalErrorLogging() doesn't no-op
+globalThis.window = { addEventListener: () => {} }
 
-const { appendLogEntry, clearDebugLog, formatDebugLogForSharing, getDebugLogSnapshot, subscribeDebugLog } =
-  await import('./errorLog')
+const {
+  appendLogEntry,
+  clearDebugLog,
+  formatDebugLogForSharing,
+  getDebugLogSnapshot,
+  subscribeDebugLog,
+  installGlobalErrorLogging,
+} = await import('./errorLog')
 
 describe('errorLog', () => {
   beforeEach(() => {
@@ -65,6 +73,19 @@ describe('errorLog', () => {
     unsubscribe()
     appendLogEntry('console.error', 'after unsubscribe')
     expect(calls).toBe(2)
+  })
+
+  describe('installGlobalErrorLogging', () => {
+    it('filters Firestore WebChannel reconnect noise out of the ring buffer, but still captures other warnings', () => {
+      installGlobalErrorLogging()
+      console.warn(
+        "@firebase/firestore: Firestore (12.19.0): WebChannelConnection RPC 'Listen' stream 0x259d6bcc transport errored. Name:  Message: ",
+      )
+      console.warn('a real warning worth keeping')
+      const log = getDebugLogSnapshot()
+      expect(log).toHaveLength(1)
+      expect(log[0].message).toBe('a real warning worth keeping')
+    })
   })
 
   describe('formatDebugLogForSharing', () => {
